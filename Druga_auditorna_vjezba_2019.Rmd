@@ -1,0 +1,442 @@
+---
+title: "SAP - Vježbe 2"
+author: "Stjepan Begušić, Mladen Karan, Stjepan Šebek"
+date: "12.04.2019."
+output:
+  html_document:
+    df_print: paged
+subtitle: Statističko zaključivanje za metričke i kategorijske podatke
+---
+
+```{r, echo = FALSE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+
+## Uvod
+
+U ovim vježbama obrađujemo općenite koncepte postavljanja i testiranja statističkih hipoteza te računanja intervala pouzdanosti i p-vrijednosti na primjeru konkretnih statističkih testova za metričke podatke (kao što su t-test, $\chi^2$-test i F-test) te statističkih testova za kategorijske podatke (kao što su $\chi^2$-test i Fisher-Irwinov egzaktni test).
+
+## Statističko zaključivnje za metričke podatke
+
+Pretpostavka velikog broja statističkih testova je da podaci dolaze iz normalne distribucije. Nažalost, to u praksi često nije slučaj. Ipak, ako imamo podatke koji ne dolaze iz normalne distribucije, ne trebamo odmah odustati od parametarske statističke analize. Jedna opcija su simulacijske studije u koje nećemo ulaziti, druga opcija su transformacije - o tome ste već čuli na predavanjima, a jako dobrom praksom se pokazala i provjera ispunjenosti nekoliko uvjeta. Dakle, odstupanje od pretpostavke o normalnosti podataka nije jako veliko (i samim time ne uzrokuje velike probleme prilikom korištenja testova koji pretpostavljaju normalnu distribuiranost podataka) ako su zadovoljena sljedeća tri uvjeta:
+
+1. Opažanja iz uzorka su nezavisna.
+2. Uzorak je dovoljno velik.
+3. Distribucija populacije nije previše zakrivljena.
+
+Uvjet pod rednim brojem 1 uglavnom je ispunjen ako imamo (reprezentativan) slučajan uzorak koji sadrži manje od 10% cijele populacije. Ispunjenost 2. uvjeta uvelike ovisi o 3. uvjetu. Populacijska distribucija je jako zakrivljena ako imamo značajne outliere (stršeće vrijednosti). Ako ne postoje neke vrijednosti koje jako zakrivljuju distribuciju u nekom smjeru, onda je opravdano koristiti testove koji imaju pretpostavku normalnosti već za uzorke veličine oko 30, ali što su podaci zakrivljeniji, treba nam veći uzorak da bi korištenje tih testova bilo opravdano.
+
+
+### Testiranje srednje vrijednosti populacije
+
+S predavanja znamo da vrijedi:
+Ako su $X_1, X_2, \ldots, X_n$ nezavisne i jednako distribuirane slučajne varijable s distribucijom $N(\mu, \sigma^2)$, tada slučajna varijabla
+$$T = \frac{\bar{X} - \mu}{S / \sqrt{n}}$$
+ima studentovu distribuciju s $n - 1$ stupnjem slobode. Kao i obično,
+$$\bar{X} = \frac{\sum_{i = 1}^{n} X_i}{n} \quad i \quad S^2 = \frac{1}{n - 1} \sum_{i = 1}^{n} (X_i - \bar{X})^2$$
+su aritmetička sredina i varijanca uzorka.
+
+Primjer 1.
+
+U svrhu istraživanja porijekla talijanske kulture i Talijana, izvršeno je mjerenje maksimalne širine lubanja 84 Etruščana, te 70 lubanja današnjih Talijana. Dobiveni podatci nalaze se u datotekama `head_sizes_of_Etruscans.txt` i `head_sizes_of_Italians.txt` (izvor: Barnicot, N.A., Brothwell, D.R. (1959) \textit{The evaluation of metrical data in the comparison of ancient and modern bones}, u: Wolstenholme, G.E.W, O'Connor, C.M. (urednici), \textit{Medical Biology and Etruscan Origins}, Little, Brown and Co., SAD).
+
+1. Učitajte podatke iz datoteke `head_sizes_of_Etruscans.txt` u varijablu `etr` pomoću funkcije `scan()`.
+2. Veličinu učitanog uzorka pohranite u varijablu `n_etr`.
+3. Nacrtajte histogram širine lubanje Etruščana i pritom koristite 10 razreda.
+4. Jesu li zadovoljeni uvjeti koji opravdavaju korištenje pretpostavke normalnosti? 
+5. Izračunajte srednju vrijednost i standardnu devijaciju širine lubanje Etruščana.
+6. Izračunajte 95% interval pouzdanosti za srednju vrijednost širine lubanje Etruščana.
+7. Možete li na razini značajnosti od 5% zaključiti da je prosječna širina lubanje Etruščana veća od 140?
+
+
+```{r}
+
+etr = scan("head_sizes_of_Etruscans.txt")
+n_etr = length(etr)
+head(etr)
+
+hist(etr, breaks = seq(from = min(etr) - 0.5, to = max(etr) + 0.5, length = 11))
+
+x_potez_etr = mean(etr)
+sd_etr = sd(etr)
+
+alfa = 0.05
+
+t_alfa_pola = qt(1 - alfa / 2, df = n_etr - 1)
+t_alfa_pola
+
+dg = x_potez_etr - t_alfa_pola * (sd_etr/sqrt(n_etr))
+gg = x_potez_etr + t_alfa_pola * (sd_etr/sqrt(n_etr))
+
+c(dg,gg)
+
+# test statistika
+ts = ((x_potez_etr - 140) / sd_etr) * sqrt(n_etr)
+ts
+
+pv = 1 - pt(ts, df = n_etr - 1) # p-vrijednost je jako mala i odbacujemo H0
+pv
+
+help(t.test)
+t.test(etr, mu = 140, alt = "greater")
+
+t.test(etr, alt = "two.sided", conf.level = 0.95)
+
+```
+
+Test srednje vrijednosti populacije u paketu R implementiran je u funkciji `t.test()` iz `stats` paketa, koja između ostalog ispisuje i intervale pouzdanosti (po defaultu 95%).
+
+Zadatak 1.
+
+1. Učitajte podatke iz datoteke `head_sizes_of_Italians.txt` u varijablu `tal` pomoću funkcije `scan()`.
+2. Veličinu učitanog uzorka pohranite u varijablu `n_tal`.
+3. Nacrtajte histogram širine lubanje Talijana i pritom koristite 9 razreda.
+4. Jesu li zadovoljeni uvjeti koji opravdavaju korištenje pretpostavke normalnosti?
+5. Izračunajte srednju vrijednost i standardnu devijaciju širine lubanje Talijana.
+6. Izračunajte 99% interval pouzdanosti za srednju vrijednost širine lubanje Talijana.
+7. Možete li na razini značajnosti od 10% zaključiti da je prosječna širina lubanje Talijana različita od 132?
+8. Koja je veza između intervala pouzdanosti i p-vrijednosti? Kako možemo samo na temelju intervala pouzdanosti i vrijednosti od $\mu_0$ zaključiti odbacujemo li ili ne odbacujemo nul-hipotezu da je očekivanje populacije jednako $\mu_0$ u korist alternative?
+
+```{r}
+
+tal = scan("head_sizes_of_Italians.txt")
+n_tal = length(tal)
+
+hist(tal, breaks = seq(from = min(tal) - 0.5, to = max(tal) + 0.5, length = 10))
+
+
+mean_tal = mean(tal)
+sd_tal = sd(tal)
+
+alfa = 0.01
+
+t_alfa_pola = qt(1 - alfa / 2, df = n_tal - 1)
+
+dg = mean_tal - t_alfa_pola * (sd_tal/sqrt(n_tal))
+gg = mean_tal + t_alfa_pola * (sd_tal/sqrt(n_tal))
+
+dg
+gg
+
+ts = ((mean_tal - 132) / sd_tal) * sqrt(n_tal)
+ts
+
+pv = 2* (1 - pt(ts, df = n_tal - 1)) # p-vrijednost je jako mala i odbacujemo H0
+pv
+# pv = 2 * min{F(ts), 1- F(ts)}   -> da ne moramo razmisljati je li dobivena vrijednost ts lijevo ili desno od ishodista
+
+t.test(tal, mu = 132, alt = "two.sided", conf.level = 0.9)
+
+t.test(tal, alt = "two.sided", conf.level = 0.90)
+
+```
+
+
+### Testiranje varijance populacije
+
+S predavanja znamo da vrijedi:
+Ukoliko su $X_1, X_2, \ldots, X_n$ nezavisne i jednako distribuirane slučajne varijable s distribucijom $N(\mu, \sigma^2)$, tada slučajna varijabla
+$$\chi^2 = \frac{(n - 1) S^2}{\sigma^2}$$
+ima $\chi^2$ distribuciju s $n - 1$ stupnjem slobode.
+
+Primjer 2.
+
+1. Odredite 95% interval pouzdanosti za varijancu širine lubanje Etruščana.
+2. Možemo li na razini značajnosti od 5% zaključiti da je varijanca širine lubanje Etruščana različita od 50?
+
+```{r}
+install.packages("TeachingDemos")
+require(TeachingDemos)
+
+# pouzdani intervali za varijancu
+
+sigma.test(etr, conf.level = 0.95)
+
+
+```
+
+Zadatak 2.
+
+1. Odredite 98% interval pouzdanosti za varijancu širine lubanje Talijana.
+2. Možemo li na razini značajnosti od 1% zaključiti da je varijaca širine lubanje Talijana manja od 50?
+
+```{r}
+require(TeachingDemos)
+
+len = length(tal)
+len
+var = var(tal)
+var
+
+dg = var / (len - 1) * chisq(0.05, df = len - 1)
+
+?chisq.test
+
+#sigma.test(tal, conf.level = 0.98)
+#sigma.test(tal, sigmasq = 50, alternative = "less")
+
+```
+
+### Test o jednakosti varijanci
+
+S predavanja znamo:
+Ako imamo dva nezavisna slučajna uzorka $X_1^1, X_1^2, \ldots X_1^{n_1}$ i $X_2^1, X_2^2, \ldots, X_2^{n_2}$ koji dolaze iz normalnih distribucija s varijancama $\sigma_1^2$ i $\sigma_2^2$, tada slučajna varijabla
+$$F = \frac{S_{X_1}^2 / \sigma_1^2}{S_{X_2}^2 / \sigma_2^2}$$
+ima Fisherovu distribuciju s $(n_1 - 1, n_2 - 1)$ stupnjeva slobode, pri čemu vrijedi:
+$$S_{X_1}^2 = \frac{1}{n_1 - 1} \sum_{i = 1}^{n_1} (X_1^i - \bar{X}_1)^2, \quad S_{X_2}^2 = \frac{1}{n_2 - 1} \sum_{i = 1}^{n_2} (X_2^i - \bar{X}_2)^2.$$
+
+U programskom paketu R test o jednakosti varijanci je implementiran u funkciji `var.test()`, koja prima uzorke iz dvije populacije čije varijance uspoređujemo.
+
+Primjer 3.
+
+Na razini značajnosti od 10% testirajte hipotezu o jednakosti varijanci širine lubanje Etruščana i Talijana.
+
+```{r}
+
+var.test(etr, tal, conf.level = 0.95, alternative = "two.sided") # F-test za varijance
+
+```
+
+
+### Testovi o jednakosti srednjih vrijednosti dvije populacije
+
+S predavanja znamo da vrijedi:
+Neka su $X_1^1, X_1^2, \ldots, X_1^{n_1}$ i $X_2^1, X_2^2, \ldots, X_2^{n_2}$ dva nezavisna slučajna uzorka koji dolaze iz normalnih distribucija s očekivanjima $\mu_1$ i $\mu_2$ te s nepoznatim, ali jednakim varijancama. Zajednička disperzija uzorka se računa kao težinska sredina disperzija $S_{X_1}$ i $S_{X_2}$:
+$$S_X^2 = \frac{1}{n_1 + n_2 - 2} [(n_1 - 1) S_{X_1}^2 + (n_2 - 1) S_{X_2}^2].$$
+Slučajna varijabla
+$$Z = \frac{\bar{X}_1 - \bar{X}_2 - (\mu_1 - \mu_2)}{\sigma \sqrt{\frac{1}{n_1} + \frac{1}{n_2}}}$$
+ima jediničnu normalnu distribuciju. Slučajna varijabla
+$$W^2 = \frac{(n_1 - 1) S_{X_1}^2 + (n_2 - 1) S_{X_2}^2}{\sigma^2}$$
+ima $\chi^2$ razdiobu s $n_1 + n_2 - 2$ stupnja slobode. Zato slučajna varijabla
+$$T = \frac{Z \sqrt{n_1 + n_2 - 2}}{W} = \frac{\bar{X}_1 - \bar{X}_2 - (\mu_1 - \mu_2)}{S_X \sqrt{1/n_1 + 1/n_2}}$$
+ima egzaktnu $t$ distribuciju s $n_1 + n_2 - 2$ stupnja slobode.
+
+Test o jednakosti srednjih vrijednosti dvije populacije u R-u je implementiran u funkciji `t.test()`.
+
+Primjer 4.
+
+1. Nacrtajte pravokutne dijagrame za širinu lubanje Etruščana i Talijana jedan kraj drugog.
+2. Na razini značajnosti od 1% testirajte hipotezu da je širina lubanje Etruščana veća od širine lubanje Talijana. Budući da smo u Primjeru 3. vidjeli da nema razloga da odbacimo pretpostavku o jednakosti varijanca širine lubanje Etruščana i Talijana, koristite pretpostavku o jednakosti varijanca.
+
+```{r}
+
+boxplot(etr,tal)
+
+t.test(etr, tal, conf.level = 0.99, alternative = "greater", var.equal = TRUE)
+
+```
+
+Zadatak 3.
+
+1. Kako izgleda test statistika u slučaju testa o jednakosti očekivanja dvije populacije ukoliko populacijske varijance nisu jednake? Koja je distribucija te test statistike?
+2. Na razini značajnosti od 1% testirajte hipotezu da je širina lubanje Etruščana veća od širine lubanje Talijana, ali bez pretpostavke o jednakosti varijanca.
+```{r}
+
+```
+
+Primjer 5.
+
+U datoteci `Kikiriki.xlsx` nalaze se podatci o veličini plodova kikirikija koji su bili tretirani na dva različita načina. Prva metoda je standardna, a druga je nova, puno skuplja metoda koja bi trebala osigurati veće plodove. Podatci u stupcu `uzorak1` predstavljaju veličine 100 plodova kikirikija koji je bio tretiran prvom metodom, a podatci u stupcu `uzorak2` predstavljaju veličine 100 plodova kikirikija koji je bio tretiran novom metodom.
+
+1. Učitajte podatke iz datoteke `Kikiriki.xlsx` uz pomoć funkcije `read.xlsx()` koja se nalazi u paketu `xlsx`.
+2. Provjerite je li opravdano koristiti test koji pretpostavlja normalnost.
+3. Na razini značajnosti od 1% provjerite daje li nova metoda veće plodove kikirikija. Koju bi vi metodu preporučili ljudima koji se bave uzgojem kikirikija?
+
+```{r}
+install.packages("xlsx")
+require(xlsx)
+kikiriki <- read_xlsx("Kikiriki.xlsx")
+
+head(kikiriki)
+
+hist(kikiriki$uzorak1)
+hist(kikiriki$uzorak2)
+
+t.test(kikiriki$uzorak1, kikiriki$uzorak2, alternative = "less")
+
+```
+
+
+### Upareni podatci
+
+Ukoliko imamo dva mjerenja neke veličine na istom uzorku i želimo ispitati postoji li značajna razlika između mjerenja, koristimo t-test za uparene podatke, također implementiran u funkciji `t.test()`.
+
+Primjer 6.
+
+Atletski klub je angažirao novog instruktora i htio je testirati daje li njegova nova metoda treniranja bolje rezultate nego metoda bivšeg trenera. U klubu trenira 10 trkača na 100m. Svakom od trkača izmjereno je vrijeme potrebno za 100m prije i poslije dolaska novog trenera i podatci su spremljeni u datoteku `100m_data.txt`.
+
+1. Učitajte podatke u R pomoću funkcije `read.table()`.
+2. Provjerite je li opravdano koristiti test koji pretpostavlja normalnost.
+3. Na razini značajnosti od 10% testirajte funkcionira li metoda treniranja novog trenera bolje od metode prethodnog trenera.
+
+```{r}
+
+pod = read.table("100m_data.txt", header = TRUE)
+head(pod)
+
+t.test(pod$Before, pod$After, alt = "greater", paired = TRUE)
+
+# radimo test na razliku
+help(t.test)
+t.test(pod$Before - pod$After, mu = 0, alt = "greater")
+
+```
+
+
+## Statističko zaključivanje za kategorijske podatke
+
+### Kategorijski podatci u R-u
+
+Programski paket R nudi široku podršku za rad s kategorijskim podatcima - od `factor` tipa podataka, do raznih statističkih alata i testova za analizu kategorijskih varijabli. Za potrebe ove vježbe učitat ćemo podatke o korisnicima kreditnih kartica iz Tajvana tokom 2005. godine, kada je nastala velika kriza kreditnog sustava zbog nemogućnosti otplate kredita brojnih korisnika. Podatci se nalaze u datoteci `credit.csv` i sadrže sljedeće varijable:
+\begin{itemize}
+\item gender: spol korisnika (m/f)
+\item education: razina školovanja korisnika (1=graduate school, 2=university, 3=high school, 4=other, 5=unknown, 6=unknown)
+\item marriage: bračno stanje (1=married, 2=single, 3=other)
+\item default: je li klijent prestao otplaćivati kredit (1=yes, 0=no) 
+\end{itemize}
+
+Pri učitavanju podataka neke varijable će R prepoznati kao `factor`, a druge se mogu vrlo jednostavno pretvoriti u factor. Podatke možemo učitati iz datoteke koristeći `read.table()` funkciju (pritom je potrebno paziti na format podataka - zaglavlja stupaca, separator podataka ili eventualno decimalnu točku). Funkcija `factor()` pretvara varijablu u `factor` sortirajući numeričke razine podataka u danom vektoru i pridjeljujući im oznake kategorija. Kao i za numeričke podatke, deskriptivnu statistiku kategorijskih podataka u `data.frame`-u moguće je dohvatiti pozivom funkcije `summary()` (ali rezultati nemaju puno smisla ako je kategorijska varijabla učitana kao integer). 
+
+Učitajmo podatke u `data.frame` i pregledajmo koje je podatke potrebno pretvoriti u `factor`:
+
+```{r load data}
+# ucitavanje podataka u df i pregled ucitanih podataka
+df = read.table("credit.csv", sep = ";", header = TRUE)
+summary(df)
+
+
+
+```
+
+Pretvorimo varijable `education`, `marriage` i `default` u `factor`. Iz specifikacije podataka moguće je primjetiti da razine 5 i 6  pripadaju kategoriji "unknown" - spojimo ih u jednu kategoriju pomoću funkcije `levels()`.
+
+```{r factor labels}
+# pretvaranje ucitanih integera u factor varijable
+
+df$default = factor(df$default, labels = c("solvent", "delinquent"))
+levels(df$default)
+
+df$marriage = factor(df$marriage, labels = c("married", "single","other"))
+levels(df$marriage)
+
+df$education = factor(df$education, labels = c("graduate school","university", "high school", "other", "unknown", "unknown"))
+levels(df$education)
+
+df = na.omit(df)
+
+summary(df)
+
+```
+
+Učestalost određenih razreda kategorijskih varijabli možemo vizualizirati kružnim i stupčastim dijagramom (funkcije `pie()` i `barplot()` koje primaju frekvencije i nazive kategorija u podatcima). Tablicu s frekvencijama i nazivima kategorija možemo dobiti pozivanjem funkcije `table()`. Pogledajmo kako su raspoređeni korisnici po razini školovanja u danom uzorku:
+
+```{r pie chart}
+# kruzni dijagram
+
+table(df$education)
+pie(table(df$education))
+
+barplot(table(df$education), cex.names = 0.5)
+
+# stupcasti dijagram
+```
+
+
+### Test o jednoj proporciji
+
+Egzaktni test o jednoj proporciji u R-u dan u funkciji `binom.test()`, kojoj je potrebno proslijediti broj "uspjeha" eskperimenta i veličinu uzorka. Raspolažemo uzorkom od 30.000 korisnika - testirajmo nultu hipotezu da 21% korisnika nije bilo u mogućnosti otplatiti kredit u odnosu na dvostranu alternativu. 
+
+```{r one proportion test}
+# broj eksperimenata
+
+n = length(df$default)
+
+# broj "uspjeha"
+
+x = length(which(df$default=="delinquent"))
+
+# egzaktni binomni test o jednoj proporciji s dvostranom alternativom 
+
+binom.test(x,n,p=0.21,alternative="t")
+
+```
+
+
+### Test o dvije proporcije
+
+Test o dvije proporcije u R-u implementiran je u funkciji `prop.test()`, koja koristi $\chi^2$ test. Testirajmo nultu hipotezu da je udio klijenata koji nisu u mogućnosti otplatiti kredit jednak u muškoj i ženskoj populaciji (dvostrana alternativa). 
+
+```{r two proportion test}
+# broj eksperimenata iz oba uzorka
+
+n = c(length(which(df$gender=="f")), length(which(df$gender=="m")))
+
+# broj uspjeha iz oba uzorka
+
+x = c(length(which(df$default[df$gender=="f"]=="delinquent")), length(which(df$default[df$gender=="m"]=="delinquent")))
+
+# test o dvije proporcije (hi-kvadrat umjesto z-testa) - bez tzv. Yatesove korekcije
+
+prop.test(x,n,correct=F, alternative = "two.sided")
+prop.test(x,n,correct=F, alternative = "less")
+
+```
+
+
+### Kontingencijska tablica
+
+Kontingencijsku tablicu moguće je dobiti pozivanjem funkcije `table()` (primjetite da `table()` radi na 1, 2, ali i više varijabli). Pogledajmo kontingencijsku tablicu za razinu školovanja i default klijenta:
+
+```{r contingency table}
+# kontingencijska tablica za razinu edukacije i default klijenta
+
+tbl = prop.table(table(df$education, df$default))
+print(tbl)
+# tablici je moguce dodati i sume redaka i stupaca
+
+print(addmargins(tbl))
+# tablicu je moguce prikazati i pomocu relativnih frekvencija
+
+```
+
+
+### Test nezavisnosti 
+
+Test nezavisnosti u programskom paketu R implementiran je u funkciji `chisq.test()` koja kao ulaz prima kontingencijsku tablicu podataka koje testiramo na nezavisnost. Ispitajmo nezavisnost mogućnosti otplate kredita o razini školovanja klijenta:
+
+```{r test of independence}
+# kontingencijska tablica
+
+t = table(df$gender, df$default)
+t = table(df$education, df$default)
+
+# hi-kvadrat test nezavisnosti bez Yatesove korekcije
+
+chisq.test(t, correct = FALSE)
+
+```
+
+Egzaktni test nezavisnosti (Fisher-Irwinov test) u R-u je moguće provesti pozivom funkcije `fisher.test()`. Dodatna vrijednost ovog testa, osim egzaktnog izračuna p-vrijednosti je i mogućnost testiranja jednostranih alternativa (samo za 2x2 kontingencijske tablice), što $\chi^2$ nema. Testirajmo hipotezu da je spol korisnika neovisan o mogućnosti otplate kredita u odnosu na alternativu da žene bolje otplaćuju kredite:
+
+```{r fisher test}
+# kontingencijska tablica
+
+t = table(df$gender, df$default)
+
+# fisher-irwinov egzaktni test s jednostranom alternativom
+
+fisher.test(t, alternative = "g")
+
+```
+
+
+Zadatak:
+
+1. Možemo li na razini značajnosti od 1% zaključiti da više od 21.5% korisnika nije moglo otplatiti kredit?
+2. Testirajte proporcije korisnika koji nisu u mogućnosti otplatiti kredit za skupinu visoko obrazovanih korisnika ("graduate school") i onih sa srednjom školom ("high school"). Možemo li na razini značajnosti od 1% zaključiti da manje visoko obrazovanih korisnika nije u mogućnosti otplatiti kredit?
+3. Koristeći $\chi^2$ test testirajte nezavisnost bračnog stanja o mogućnosti otplate kredita. Možemo li na razini značajnosti od 5% odbaciti nultu hipotezu o nezavisnosti ovih varijabli?
+ 
+
+

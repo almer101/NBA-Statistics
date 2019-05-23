@@ -1,0 +1,479 @@
+---
+title: "SAP - Vježbe 3"
+subtitle: "Neparametarski statistički testovi i linearna regresija"
+author: "Stjepan Begušić, Mladen Karan, Stjepan Šebek"
+date: "12/05/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Neparametarski statistički testovi
+
+U praksi je često nemoguće koristiti klasične testove, kao npr. t-test, zato što nije moguće provjeriti jesu li zadovoljene 
+pretpostavke za primjenu takvog testa. U ovoj vježbi razmatrat ćemo dvije neparametarske metode testiranja -- `Jackknife` i 
+`Bootstrap`, koje do neke mjere ublažavaju ovaj nedostatak. Kako biste mogli uspješno riješiti sve zadatke iz ovog dijela 
+vježbe potrebno je instalirati paket `bootstrap`.
+
+## Aproksimacija distribucije uzorkovanja
+
+Distribucija uzorkovanja na razini cijele populacije nam (općenito) nije poznata. Ipak, možemo iz uzorka generirati više 
+poduzoraka i računati procjenu nepoznatog parametra na svakom poduzorku. Ako je naš početni uzorak bio reprezentativan za
+populaciju, distribucija procjena u različitim poduzorcima trebala bi biti dobra aproksimacija stvarne distribucije uzorkovanja.
+Na temelju takve aproksimacije možemo raditi intervalne procjene parametara i testiranje hipoteza bez pretpostavki o normalnosti.
+No, važno je imati na umu da se nismo u potpunosti riješili pretpostavki jer imamo pretpostavku da 
+je `početni uzorak bio reprezentativan za populaciju`. Zbog te pretpostavke, ovi postupci često rade loše na 
+malim skupovima podataka. 
+
+Skupljanje poduzoraka može se napraviti na više načina, neki od njih su:
+
+- Poduzorak se dobiva iz cijelog uzorka tako da maknemo jedan element
+- Poduzorak se dobiva tako da radimo uzorkovanje s ponavljanjem elemenata iz početnog uzorka (onoliko elemenata koliko je bilo u početnom uzorku)
+
+Prvi način je tipičan za Jackknife algoritam, dok se drugi češće koristi u ostalim bootstrapping algoritmima.
+Imajmo na umu da se jackknife u osnovi može smatrati specijalnim slučajem bootstrapping pristupa općenito.
+
+```{r}
+# objasniti kako bootstrap i jackknife procijene distribuciju uzorkovanja 
+# objasniti koje su pretpostavke bootstrap testa (da je uzorak dobra reprezentacija za cijelu populaciju)
+install.packages("boot",dep=TRUE)
+require(bootstrap)
+set.seed(42)
+# objasnjenje koja polja tu ima i koja su nam zanimljiva
+light <- c(28, -44, 29, 30, 26, 27, 22, 23, 33, 16, 24, 29, 24, 
+	   40 , 21, 31, 34, -2, 25, 19)
+
+hist(light)
+
+r = bootstrap(light, 30, mean)
+r
+```
+
+```{r Objasnjenje aproks. sampling dist. 1}
+
+# generirati neke podatke
+# srednja vrijednost populacije je 4 (opcenito je srednja vrijednost za ovu distribuciju shape * scale)
+
+podmalo = rgamma(20, shape = 4, scale = 1) # manji uzorak populacije
+podpuno = rgamma(1000, shape = 4, scale = 1) # manji uzorak populacije
+
+hist(podmalo, breaks = 30)
+hist(podpuno, breaks = 30)
+
+```
+
+```{r Objasnjenje aproks. sampling dist. 2}
+
+# pokazati na slici za srednju vrijednost, ali i za neke velicine koje nemaju normalnu distribuciju uzorkovanja
+DU.malo.100 = bootstrap(podmalo, 100, mean)$thetastar
+DU.malo.1000 = bootstrap(podmalo, 1000, mean)$thetastar
+DU.puno.100 = bootstrap(podpuno, 100, mean)$thetastar
+DU.puno.1000 = bootstrap(podpuno, 1000, mean)$thetastar
+
+# pokusavamo sa razlicitim brojevima bootstrap uzoraka i onda gledamo kada se graf prestane mijenjati i kada se prestane mijenjati onda je to to i nasli smo dobar broj uzoraka
+
+par(mfrow=c(2,2))
+hist(DU.malo.100, breaks = 20)
+hist(DU.malo.1000, breaks = 20)
+hist(DU.puno.100, breaks = 20)
+hist(DU.puno.1000, breaks = 20)
+```
+
+```{r Objasnjenje aproks. sampling dist. 3}
+
+# pokazati na slici za srednju vrijednost, ali i za neke velicine koje nemaju normalnu distribuciju uzorkovanja
+DU.malo.100 = bootstrap(podmalo, 100, median)$thetastar
+DU.malo.1000 = bootstrap(podmalo, 1000, median)$thetastar
+DU.puno.100 = bootstrap(podpuno, 100, median)$thetastar
+DU.puno.1000 = bootstrap(podpuno, 1000, median)$thetastar
+
+par(mfrow=c(2,2))
+hist(DU.malo.100, breaks = 20)
+hist(DU.malo.1000, breaks = 20)
+hist(DU.puno.100, breaks = 20)
+hist(DU.puno.1000, breaks = 20)
+
+# ako uzimamo uzorke iz nekog uzorka koji ima vise clanova (100>10) onda ce ciljna distribucija postajati sve uza!
+
+
+```
+
+## Procjena intervala povjerenja za vrijednost parametra
+
+Kad imamo aproksimaciju distribucije uzorkovanja nepoznatog parametra onda možemo dobiti interval pouzdanosti na više načina,
+oni koje ćemo napraviti su:
+
+- Korištenjem t-distribucije - napravi se pretpostavka da je distribucija uzorkovanja t-distribucija te se tada interval pouzdanosti računa preko njenih kvantila 
+- Korištenjem percentila - interval se dobiva računanjem kvantila izravno iz podataka dobivenih poduzorkovanjem
+
+
+## Jackknife
+
+Jackknife algoritam računa interval pouzdanosti preko t-distribucije.
+
+```{r Jackknife}
+library(bootstrap)
+# 1. Jacknife
+
+set.seed(42)
+res <- jackknife(podpuno, mean)
+
+theta_jack = mean(res$jack.values) - res$jack.bias
+lb.jack = theta_jack - qt(0.975, length(podpuno) - 1) * res$jack.se  
+ub.jack = theta_jack + qt(0.975, length(podpuno) - 1) * res$jack.se
+
+print(theta_jack)
+print(lb.jack)
+print(ub.jack)
+```
+
+
+## Bootstrap 
+
+Bootstrap algoritam računa interval povjerenja koristeći percentile. Procjene dobivene iz poduzoraka se sortiraju,
+i kao granice intervala povjerenja se uzimaju podaci neposredno ispod 2.5 percentila i iznad 97.5 percentila (za dvostrani test).
+
+
+```{r}
+# objasniti percentilne intervale povjerenja
+# objasiti razliku jednostranih i dvostranih testova
+# napomenuti da je to jedna varijanta bootstrapa da postoje druge
+
+```
+
+
+## ZADATAK 1: 
+Popunite kod u funkciji funkciju booststraptest dolje.
+Ulazi u funkciju su:
+
+podaci -- podaci s kojima radimo 
+alfa -- nivo znacajnosti
+N -- broj bootstrap uzoraka koje treba generirati
+f -- procjenitelj za parametar koji nas zanima (ovaj parametar je funkcija koja prima podskup podataka i na temelju njega računa procjenu parametra theta)
+
+Funkcija vraća listu s tri elementa:
+lb - broj koji predstavlja donju granicu intervala povjerenja
+ub - broj koji predstavlja gornju granicu intervala povjerenja
+dist - vektor čiji elementi su procjene parametra na svim poduzorcima (radi kasnijih vizualizacija)
+
+Pri implementaciji proučite kako radi funkcija `quantile`.
+
+```{r}
+# 3. Implementacija bootstrap testa hipoteze
+
+# proci kroz R stvari potrebne za rijesiti zadatak
+# samo si moraju pogledati fju quantile
+
+
+a = c(1,2,3,4,5,6,7,8,9,10,11)
+v = quantile(a, c(0.05 / 2, 1 - 0.05 / 2))
+v
+
+bootstrapinterval <- function(podaci, alfa, f, N){
+  # upišite vaš kod ovdje
+  dist = bootstrap(podaci, N, f)$thetastar
+  lb = quantile(dist, alfa / 2) 
+  ub = quantile(dist, 1 - alfa / 2)
+  
+  return(list(lb=lb,ub=ub,dist=dist))
+}
+
+bootstrapinterval(a, 0.05, mean, 20)
+
+```
+
+
+## Usporedba parametarskih i neparametarskih postupaka
+
+Za neke parametre, poput srednje vrijednosti, možemo koristiti i parametarske i neparametarske postupke.
+
+```{r}
+
+set.seed(42)
+
+pod.usp = podpuno
+# bootstrap
+res.boot <- bootstrapinterval(pod.usp, 0.05, mean, 3000)
+print("Bootstrap confidence interval:")
+print(res.boot$lb)
+print(res.boot$ub)
+
+
+# jackknife
+res.jack <- jackknife(pod.usp, mean)
+
+theta_jack = mean(res.jack$jack.values) - res.jack$jack.bias
+lb.jack = theta_jack - qt(0.975, length(pod.usp) - 1) * res.jack$jack.se  
+ub.jack = theta_jack + qt(0.975, length(pod.usp) - 1) * res.jack$jack.se
+
+print("Jackknife confidence interval:")
+print(lb.jack)
+print(ub.jack)
+
+
+# t-distribucija
+lb.t = mean(pod.usp) - qt(0.975, length(pod.usp) - 1) * sd(pod.usp) / sqrt(length(pod.usp))
+ub.t = mean(pod.usp) + qt(0.975, length(pod.usp) - 1) * sd(pod.usp) / sqrt(length(pod.usp))
+
+print("T-distribution confidence interval:")
+print(lb.t)
+print(ub.t)
+
+
+```
+
+Rezultati su slični, najveća prednost neparametarskih testova je što ih možemo koristiti za bilo kakve parametre.
+
+### Zadatak 2:
+
+U praksi često želimo računati intervale pouzdanosti i testirati hipoteze za mjere koje su rezultat nekog složenijeg izračuna.
+U takvim situacijama teško je odrediti koja je distribucija prikladna. Jedan takav primjer je MRR mjera, ona se računa za model
+koji rangira dokumente na temelju korisničkog upita i to po sljedećoj formuli:
+$$ \mathit{MRR} = \frac{1}{|Q|} \sum_{q_i \in Q}\frac{1}{R_i} $$
+Gdje je $R_i$ rang prvog relevantnog dokumenta za upit $q_i$ iz nekog skupa upita $Q$ (koji je samo uzorak iz populacije svih mogućih upita).
+
+Razmatramo da zamijenimo stari algoritam pretraživanja sa novim, potencijalno boljim. Stari algoritam je isprobavan godinama i njegova
+točnost je utvrđena kao 0.18 prema MRR mjeri. Novi algoritam je tek u testnoj fazi ali logirajući klikove korisnika skupljen je novi uzorak s ukupno 3000 korisničkih upita i njihovih rangova $R_i$. Time je dobiven uzorak od 3000 točaka na kojem možemo procijeniti MRR za novi model.
+Izračunajte MRR na cijelom uzorku. Potom iskoristite bootstrap pristup da dobijete 95% pouzdanu intervalnu procjenu MRR novog algoritma
+i testirajte (dvostranim testom) hipotezu H0 da je MRR novog algoritma jednak 0.18. Nacrtajte histogram aproksimirane distribucije 
+uzorkovanja, je li ona bila normalna?
+
+Uputa: kao procjenitelj za parametar MRR možete koristiti istoimenu funkciju već implementiranu ispod, podaci o novih 
+       3000 upita (vektor brojeva $R_i$ koji su ulaz za funkciju MRR) nalazi se u varijabli `novi.rezultati`.
+
+
+```{r}
+# generiranje podataka
+set.seed(42)
+
+novi.rezultati = rgamma(3000, shape = 1.0, scale = 10) + 1 
+
+hist(novi.rezultati, breaks = 30)
+# funkcija za racunanje MRR
+MRR = function(x){
+  return((1/length(x))*sum(1/x))
+}
+```
+
+
+
+
+```{r}
+# ZADATAK STUDENTI *****************************************
+
+# upišite vaš kod ovdje
+
+
+```
+
+
+
+## Linearna regresija
+
+Linearna regresija korisna je u raznim istraživačkim i praktičnim situacijama, a daje odgovore na nekoliko bitnih pitanja:
+
+- Postoji li veza između ulazne varijable (ili više ulaznih varijabli) - regresora, i izlazne varijable (reakcije)?
+- Koliko je jaka ta veza?
+- Koje ulazne varijable najviše utječu na izlaznu varijablu i koliko je jak taj efekt?
+- Možemo li predvidjeti izlaz za neke nove vrijednosti ulaznih varijabli i s kojom točnošću?
+
+### Model linearne regresije i estimacija parametara 
+
+Model linearne regresije pretpostavlja linearnu vezu između ulaznih i izlaznih varijabli:
+$$Y = \beta_0 + \sum_{j = 1}^{p}\beta_jx_j + \epsilon$$
+Pretpostavke modela: 
+
+- linearnost veze $X$ i $Y$
+- $\epsilon \sim N(0,\sigma^2)$
+
+Iz podataka je moguće dobiti procjenu modela:
+$$\hat{Y} = b_0 + \sum_{j = 1}^{p}b_jx_j + e,$$
+odnosno:
+$$\hat{\mathbf{y}} = \mathbf{X} \mathbf{b} + \mathbf{e}$$
+u matričnom zapisu.
+
+Procjena je zasnovana na metodi najmanjih kvadrata, tj. minimizaciji tzv. "sum of squared errors":
+$$SSE = \sum_{i = 1}^{N}(y_i - \hat{y}_i)^2 = (\mathbf{y}-\mathbf{X}\mathbf{b})^T(\mathbf{y}-\mathbf{X}\mathbf{b})$$
+Derivacijom se dobije:
+$$\mathbf{b} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y}$$
+Da bi se ova jednadžba mogla riješiti potrebno je invertirati matricu $\mathbf{X}^T\mathbf{X} \in \mathrm{R}^{p\times p}$ (složenost $O(n^3)$), uz pretpostavku da je matrica \textbf{punog ranga}.
+
+Estimacija parametara linearne regresije u R-u, kao i statistički testovi vezani uz parametre i estimirani model dostupni su u funkciji `lm` u paketu `stats`. Podatci za analizu su dani u datoteci `bike.sharing`, te sadrže informacije o vremenskim prilikama i broju bicikla koje je određena bike-sharing agencija iznajmila taj dan.
+
+```{r lm}
+par(mfrow=c(1,1))
+# ucitajmo podatke i provjerimo odnos broja iznajmljenih bicikla (cnt) i temperature tog dana (temp)
+
+load('bike.sharing')
+fit = lm(cnt~temp,data=bike.sharing)
+
+
+
+```
+
+### Normalnost reziduala
+Normalnost reziduala moguće je provjeriti grafički, pomoću kvantil kvantil plota (usporedbom s linijom normalne razdiobe), te statistički pomoću Kolmogorov-Smirnovljevog testa.
+
+```{r res}
+
+plot(fit$residuals)
+
+
+```
+
+```{r qq}
+
+qqnorm(rstandard(fit))
+qqline(rstandard(fit))
+
+# ovako vidimo jesu li stvarno reziduali normalno distribuirani (sto su vise slicni normalnoj to su slicniji ravnoj liniji)
+
+```
+
+```{r ks}
+
+ks.test(rstandard(fit),'pnorm')
+
+```
+
+### Statističko zaključivanje o estimiranim parametrima i modelu
+Uz zadovoljenu pretpostavku o normalnosti reziduala $e$ moguće je primijeniti različite statističke testove o estimiranim koeficijentima i fitanom modelu. 
+
+#### t-test
+Budući da vrijedi $B_i\sim N(\mu_{B_i},\sigma_{B_i})$, $\mu_{B_i} = \beta_i$, statistika 
+$$T = \frac{B_i - \beta_i}{SE(B_i)}$$
+ima $t$-distribuciju s $n-k-1$ stupnjeva slobode, gdje je $k$ broj parametara. Većina programskih paketa, pa tako i R, pri estimiranju koeficijenata linearne regresije automatski testira $\beta_i = 0$. One koeficijente za koje možemo odbaciti $H_0: \beta_i = 0$ u korist $H_1: \beta_i \neq 0$ zovemo \textbf{značajni koeficijenti}.
+
+```{r t test}
+load('bike.sharing')
+
+fit = lm(cnt~temp + holiday, data=bike.sharing)
+summary(fit)
+
+# kada je visa temperatura onda se iznajmljuje vise bicikala
+# kada je holiday onda se manje bicikala iznajmljuje, ali u to ne mozemo biti bas sigurni (p-value = 0.214)
+
+```
+
+### Mjere kvalitete prilagodbe modela podatcima
+
+#### SSE
+Mjera koju minimiziramo estimiranjem parametara modela ("fitanjem na podatke") je SSE:
+$$SSE = \sum_{i = 1}^{N}(y_i - \hat{y}_i)^2$$
+
+#### $\mathbf{R^2}$
+Vrlo česta mjera kvalitete prilagodbe modela je koeficijent deteminacije, definiran kao:
+$$R^2 = 1 - \frac{SSE}{SST},$$
+gdje je: $SST = \sum_{i = 1}^{N}(y_i - \bar{y}_i)^2$ tzv. "total corrected sum of squares". Koeficijent determinacije $R^2$ je za linearne modele po definiciji $R^2 \in [0,1]$ i opisuje koji postotak varijance u izlaznoj varijabli $Y$ je estimirani linearni model objasnio/opisao.
+
+#### Adjusted $\mathbf{R^2}$
+Prilagođeni koeficijent determinacije penalizira dodatne parametre u modelu:
+$$R_{adj}^2 = 1 - \frac{SSE/(n-k-1)}{SST/(n-1)}.$$
+
+```{r r squared}
+load('bike.sharing')
+
+fit = lm(cnt~atemp + rnorm(length(atemp), mean=0,sd=1), data = bike.sharing)
+summary(fit)
+
+fit1 = lm(cnt~atemp, data = bike.sharing)
+summary(fit1)
+
+```
+
+### F-test
+Za ispitivanje signifikantnosti čitavog modela koristi se F-statistika:
+$$ f = \frac{SSR/k}{SSE/(n-k-1)}, $$
+gdje je $SSR = \sum_{i=1}^n(\hat{y}_i-\bar{y})^2$.
+
+```{r f test}
+load('bike.sharing')
+
+# usporedujemo ima li nul-model signifikantno vecu varijancu od modela koji ima neku jos dodatnu varijablu
+
+```
+
+### Korelacijski koeficijent
+Korelacijski koeficijent je vrlo često korišten koncept zasnovan na linearnoj regresiji, te opisuje smjer i prirodu veze dviju varijabli. Pearsonov korelacijski koeficijent definiran je kao:
+
+$$r = \frac{S_{xy}}{\sqrt{S_{xx}S_{yy}}},$$
+
+gdje je $S_{xx} = \sum(x_i-\bar{x})^2$,$S_{yy} = \sum(y_i-\bar{y})^2$, a $S_{xy} = \sum(x_i-\bar{x})(y_i-\bar{y})$.
+
+```{r cor}
+load('bike.sharing')
+
+#jednostavna lin regresija 2 varijable
+fit = lm(cnt~temp, data=bike.sharing)
+summary(fit)$r.squared
+
+# korelacijski koeficijent te 2 varijable - kvadrat koeficijenta jednak je R^2
+cor(bike.sharing$cnt, bike.sharing$temp)^2
+
+```
+
+
+## Transformacije podataka, dodavanje interkacijskih članova
+U nekim situacijama, u svrhu izgradnje boljeg modela poželjno je nad ulaznim ili izlaznim varijablama primjeniti transformacije, najčešće $f(x) = \log x$ ili $f(x) = e^x$. 
+Također, moguće je u model regresije dodavati tzv. interakcijske članove ili kvadrate, kubove, ...itd. ulaznih varijabli, npr. $x_1^2$, $x_1x_2$, $x_2^2$.
+
+U oba slučaja modifikacije se primjenjuju na temelju pretpostavki o prirodi interakcije i modelu. Provjerimo na primjeru temperature i broja iznajmljenih bicikala:
+
+```{r trans}
+# ucitajmo podatke i provjerimo odnos broja iznajmljenih bicikla (cnt) i temperature tog dana (temp)
+load('bike.sharing')
+
+fit = lm(cnt~temp, data = bike.sharing)
+summary(fit)
+
+# iz grafa mozemo promotriti vezu i zakljuciti da mozda postoji neka kvadratne priroda veze - buduci da vjerojatno manje ljudi iznajmljuje bicikle kada je jako hladno ili jako toplo
+plot(bike.sharing$temp, bike.sharing$cnt)
+lines(bike.sharing$temp, fit$fitted.values, col='red')
+
+ks.test(rstandard(fit),'pnorm')
+
+# fit = lm(cnt~temp+I(temp^2))
+
+```
+
+Vrijednosti izlaza za nove podatke moguće je izračunati pozivom funkcije `predict.lm`:
+```{r predict}
+# ucitajmo podatke i provjerimo odnos broja iznajmljenih bicikla (cnt) i temperature tog dana (temp)
+
+fit = lm(cnt~temp, data = bike.sharing)
+summary(fit)
+plot(bike.sharing.new$temp, bike.sharing.new$cnt)
+
+prediction = predict.lm(fit, bike.sharing.new, interval='confidence')
+
+```
+
+
+
+Pokušajte dati odgovore na sljedeća pitanja za bike-sharing podatke:
+
+- Je li moguće predvidjeti potražnju za biciklima s obzirom na ulazne varijable, i s kojom točnošću?
+- Koje ulazne varijable najviše utječu na izlaznu varijablu?
+- Koliko dobro model linearne regresije objašnjava potražnju bike-sharing bicikla?
+- Kolika je predviđena potražnja za novi skup podataka, dan u `bike.sharing.new` dataframeu?
+
+Pritom je potrebno pratiti korake:
+
+- Estimacija parametara linearne regresije iz danih podataka
+- Normalnosti reziduala
+- Statističko zaključivanje o estimiranim regresijskim koeficijentima te odabir značajnih varijabli
+- Adekvatnost prilagodbe estimiranog modela
+- Predviđanje novih vrijednosti
+
+```{r bike.sharing}
+
+# gledati gore kuharicu!!! (pritom je potrebno pratiti korake...)
+
+```
+
+## Zadatak:
+Estimirajte linearni model za izlazne varijable `casual` i `registered` iz `bike.sharing` dataframea. Izaberite reducirani model sa značajnim varijablama, provjerite normalnost reziduala i ispitajte kvalitetu prilagodbe oba modela. Je li lakše predvidjeti slučajne (neregistrirane) korisnike bike-sharing usluge ili registrirane?
+
+

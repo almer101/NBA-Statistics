@@ -1,0 +1,589 @@
+---
+title: "SAP - Vježbe 1"
+subtitle: "Uvod u R, deskriptivna statistika, vizualizacija podataka"
+author: "Stjepan Begušić, Mladen Karan, Stjepan Šebek"
+date: "16.03.2018."
+output: pdf_document
+---
+
+```{r, echo = FALSE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+
+## Uvod
+
+Vježbe i projekt na predmetu "Statistička analiza podataka" izvode se u programskom jeziku R, radnoj okolini RStudio, u obliku R Markdown izvještaja koji kombiniraju pisanje teksta s programskim kodom i rezultatima izvođenja koda. Predznanje ovih alata nije nužno za izvedbu vježbi i projekta jer se kroz vježbe demonstriraju ključne funkcionalnosti koje će se koristiti pri izradi projekta. Kao dodatne materijale preporučamo udžbenik "Programirajmo u R-u" doc. dr. sc. Damira Pintara, dostupan na stranicama vještine "Osnove programskog jezika R"  (\url{https://www.fer.unizg.hr/predmet/opjr}). 
+
+## R Markdown
+
+R Markdown dokument sastavljen je od isječaka koda u R-u i teksta oko njih. Trenutnu liniju koda izvodimo kombinacijom tipaka `CTRL+ENTER`, a cijeli isječak kombinacijom `CTRL+SHIFT+ENTER`. Iz R Markdown dokumenta moguće je stvoriti izvještaj u PDF, HTML, DOCX ili drugim formatima (`output` parametar u zaglavlju dokumenta) kombinacijom tipaka `CTRL+SHIFT+K`. 
+
+## Osnovne operacije i funkcije
+
+Osnovne operacije (`+`,`-`,`*` i `/`) i logičke operacije (`&` i `|`) funkcioniraju kao i u srodnim programskim paketima. Također, R ima ugrađene standardne funkcije (kao što su `sin()`, `log()` ili `exp()`). Dokumentacija funkcija dostupna je kroz naredbu `help()`. Varijabli možemo pridružiti vrijednost koristeći bilo koji od dva operatora:  `=` ili `<-` - razlike u ova dva operatora nam nisu bitne te ćemo u sklopu ovih vježbi koristiti `=` radi jednostavnosti.
+
+```{r}
+# nekoliko osnovnih operacija
+# zbrajanje
+5 + 4
+# dijeljenje
+7 / 3 
+# cjelobrojno dijeljenje
+7 %/% 3
+# ostatak pri dijeljenju
+7 %% 3
+# logicke operacije
+TRUE & FALSE
+# bez dodatnih parametara, funkcija 'log()' je prirodni logaritam, tj. logaritam s bazom e
+log(10)
+# dokumentaciju pojedinih funkcija u R-u mozemo dobiti pomocu naredbe 'help()'
+help(log)
+# razliciti nacini pridruzivanja vrijednosti varijablama
+x <- 2
+y = 5
+```
+
+
+## Formiranje vektora i matrica
+
+Vektore možemo kreirati pomoću raznih funkcija, najčešće korištene su: `c`, `seq` i `rep`. Matrice možemo kreirati pomoću raznih funkcija, najčešće korištene su: `matrix`, `rbind`, `cbind` i `diag`.
+
+```{r}
+# kreiranje vektora naredbom 'c' - samo redom navodimo elemente koje zelimo pohraniti u vektor
+a = c(3, 14, 5, 7)
+b = c(1, 2, 3)
+# naredbom 'c' mozemo i vise vektora spojiti u jedan
+c = c(a, b)
+# kreiranje nizova uzastopnih brojeva
+d = 1:15
+e = 19:16
+# kreiranje vektora naredbom seq
+f = seq (from = 2, by = 3, length = 6)
+f
+ # vektor od devet jedinica
+g = rep(1, 9)
+ # vektor u kojem je 4 puta za redom ponovljen vektor (1, 2, 3)
+h = rep(c(1, 2, 3), 4)
+ # vektor u kojem je na prva 3 mjesta broj 1, na sljedeca 4 mjesta broj 2 i na zadnja 2 mjesta broj 3
+i = rep(c(1, 2, 3), c(3, 4, 2))
+
+# kreiranje matrice naredbom 'matrix'
+# naredbi 'matrix' proslijedimo elemente koje zelimo staviti u matricu, broj redaka/stupaca matrice, zelimo li matricu popunjavati po retcima ili stupcima itd. Bez dodatnih parametara, matrica se popunjava po stupcima
+A = matrix(1:9, nrow = 3)
+A = matrix(1:9, nrow = 3, byrow = T)
+# dva (ili vise) vektora jednakih dimenzija mozemo naredbom 'rbind' spojiti u matricu tako da svaki od njih bude jedan redak
+B = rbind(a, e)
+# dva (ili vise) vektora jednakih dimenzija mozemo naredbom 'cbind' spojiti u matricu tako da svaki od njih bude jedan stupac
+C = cbind(a, e)
+# kreiranje matrice naredbom 'diag' - samo proslijedimo vektor ciji elementi ce biti na dijagonali matrice (ostali elemeni su 0)
+D = diag(1:5)
+```
+
+##Operacije s vektorima i matricama
+
+Operacije (`+`,`-`,`*` i `/`) i logičke operacije (`&` i `|`) nad vektorima/matricama u jeziku R izvršavaju se po elementima vektora/matrica. Matrično množenje ostvaruje se koristeći operator `%*%`. Potenciranje matrica ostvaruje se pozivom funkcije `matrix.power()` iz paketa `matrixcalc`. Dodatne pakete moguće je instalirati kroz sučelje ili naredbom `install.packages()`. Instalirane pakete potrebno je učitati naredbom `require()` ili `library()`.
+
+```{r}
+# iz vektora (1, 2, 3, 4, 5) biramo 9 vrijednosti s ponavljanjem i tih 9 vrijednosti ubacimo u matricu redak po redak
+A = matrix(sample(1:5, size = 9, replace = TRUE), byrow = T, nrow = 3)
+# transponiranje matrice
+t(A)
+# potenciranje po elemenatima
+A^2
+# mnozenje po elementima
+A * A
+# matricno mnozenje
+A %*% A
+# zbroj elemenata po stupcima/retcima
+colSums(A)
+rowSums(A)
+```
+
+**Zadatak**
+
+Ponovimo neke od stvari koje smo naučili o vektorima i matricama u R-u kroz sljedećih par zadataka:
+
+1. Kreirajte vektor a koji sadrži prvih 5 prostih brojeva.
+
+2. Kreirajte vektor b duljine 13 koji na prva 4 mjesta ima trojke, na sljedeća 3 mjesta jedinice te na zadnjih 6 mjesta petice.
+
+3. Kreirajte vektor c duljine 12 kojem je prvi element jednak 31, a svaki sljedeći za dva manji od prethodnog.
+
+4. Spojite vektore b i c u jedan vektor i nazovite ga d.
+
+5. Kreirajte kvadratnu matricu A reda 5 čiji elementi su elementi vektora d poredani po retcima.
+
+6. Pomnožite matricu A i vektor a i rezultat pohranite u vektor e.
+
+7. Sumirajte sve elemente vektora e.
+
+Da biste riješili ovaj zadatak morate prvo kreirati novi isječak koda. To možete napraviti kombinacijom tipaka `CTRL+ALT+I`.
+
+
+## Tipovi podataka i vrste varijabli
+
+Programski jezik R podržava tipove podataka kao i većina ostalih programskih jezika (npr. logički, cjelobrojni, realni, tekstualni). Velika prednost R-a u odnosu na alternative je ugrađen tip podataka `data.frame` (napomena: znak '.' nema isto značenje u R-u kao u drugim jezicima, već se koristi kao i svaki drugi znak u imenima varijabli), koji može sadržavati različite tipove podataka. Programski jezik R raspoznaje i različite vrste varijabli (nominalne, ordinalne, intervalne i racionalne), što je važno za statističku analizu.
+
+```{r}
+# numericki podaci -- varijable cije su vrijednosti na intervalnoj ili racionalnoj skali
+podaci = c(1,2,3,3,2,1,2,2,3)
+# vraca nam klasu objekta (numeric)
+
+# factor -- nominalne varijable
+
+podaci2 = factor(c("plava", "crna", "plava", "smedja"))
+podaci2
+# skup mogucih vrijednosti factor varijable moze se dohvatiti funkcijom levels
+
+
+# factor varijabla se moze napraviti i iz vektora brojeva
+
+# labele se dodjeljuju po redu jedinstvenim vrijednostima iz num.vektor (koje se prvo sortiraju) -- u ovom slucaju 1, 2, 3 --> "PLAVA","CRNA","SMEDJA"
+
+postbr = c(21000, 42000, 21000, 10000, 42000)
+postbr
+
+factor(postbr, labels = c("ZG", "ST", "VZ"))
+```
+
+## `data.frame`
+
+R uključuje i razne ugrađene skupove podataka u sklopu paketa `datasets` (naredbom `help()` moguće je pristupiti dokumentaciji svakog dataseta). Jedan od poznatijih skupova podataka su podatci Edgara Andersona o duljinama i širinama lapova i latica cvjetova irisa, u R-u oblikovan u `data.frame`. 
+
+Imena stupaca (varijabli) `data.frame`-a moguće je dobiti funkcijom `names()`, a svakom pojedinom stupcu (varijabli) pristupa se pomoću znaka `$` na način: `ime.data.framea$ime.varijable`. Osnovnu deskriptivnu statistiku podataka u `data.frame`-u moguće je dobiti naredbom `summary()`. Naredbom `head()` moguće je pregledati prvih nekoliko redaka u `data.frame`-u.    
+
+```{r}
+# ucitavanje built-in dataseta
+
+help(iris)
+pod = iris
+pod
+
+# pregled samo prvih nekoliko redaka
+head(pod)
+
+
+# dimenzije dataseta
+dim(pod)
+names(pod)
+
+# uvodna analiza, pristup stupcima data.frame objekta preko imena pomocu operatora $
+
+# klasa ove varijable je "numeric" -- varijabla na intervalnoj/racionalnoj skali
+
+
+# klasa ove varijable je "factor" -- varijabla na nominalnoj/ordinalnoj skali
+
+# osnovna deskriptivna statistika
+summary(pod)
+
+# konverzija data.frame-a i matrica
+
+
+
+```
+
+
+```{r}
+
+help(iris)
+pod = iris
+pod
+
+# dodavanje stupca
+class(pod$Species)
+pod$Species
+
+summary(pod)
+
+pod$novi.stupac = c(3,2,1,3,2,1)
+pod$novi.stupac = NULL
+pod
+
+# micanje stupca
+
+# dodavanje retka
+novi.red = data.frame(5.1, 3.2, 1.6, 0.5 , "virginica")
+novi.red
+
+class(novi.red)
+pod2 = rbind(pod, novi.red) # ne radi jer imena stupaca ne odgovaraju
+names(pod)
+names(novi.red) = names(pod)
+names(novi.red)
+pod2 = rbind(pod, novi.red) 
+pod2
+# ovo ispravlja problem 
+
+pod2$Petal.Length
+
+names(pod2)
+
+plot(x = pod2$Sepal.Length, y = pod2$Petal.Length)
+
+# micanje redova 
+
+pod3 = pod2[-c(7),] # daj sve indexe osim 7
+pod3
+
+
+# znacenje negativnih indeksa je detaljno objasnjeno u iducem isjecku koda
+
+```
+
+
+```{r}
+
+# indeksiranje 
+
+# jedan indeks izdvaja stupac
+pod[2] # daj 2. stupac
+
+# ili vise stupaca (indeks je u ovom slucaju vektor brojeva)
+pod[c(2,5)]
+pod[c(2:5)] # ukljucivo
+
+# ili sve osim odredjenih stupaca (negativni brojevi kao indeksi znace izostavljanje tih indeksa)
+pod[-c(3)]
+pod[-c(3, 5)]
+
+# kod vise (vektora) indeksa prvi predstavlja redak a drugi stupac
+pod[3, 5]
+pod[c(2,3), 5]
+pod[c(2,3), c(3,4,5)]
+pod[c(2,3),]
+
+# moze se promijeniti vrijednost na nekoj poziciji
+pod[2,1] = 4.2
+
+# mogu se koristiti rangevi
+
+# 2:5 je isto kao da piše c(2,3,4,5)
+
+# ili indeksi mogu biti izostavljeni
+# retci 3 i 4 i svi stupci
+
+# svi retci i stupci 3 i 4
+
+
+# stupci mogu biti zadani vektorom imena umjesto brojeva 
+pod[c(3,4,5),c("Petal.Length", "Sepal.Width")]
+pod[c(3,4,5),-5]
+#pod[c(3,4,5),-c("Species")]
+
+# operator '-' radi kako bi ocekivali (uz uvjet da koristimo vektore brojeva)
+
+
+# ovo je jedna varijanta koja ne radi jer operator '-' nije definiran za vektor character vrijednosti
+# pod[c(2,5,6), -c("Species")]  
+# ali ovo se moze rijesiti logickim indeksiranjem sto cemo detaljnije obraditi u iducem isjecku koda
+
+```
+
+
+```{r}
+
+# uvjetno indeksiranje pomocu logical vektora
+pod = head(pod)
+logvek = pod$Sepal.Length > 4.5
+logvek
+pod[logvek,]
+
+pod[pod$Sepal.Length > 4.5 & pod$Sepal.Width > 3.3,]
+
+pod[names(pod)!="Species"]
+
+# svi redovi gdje je gornji uvjet zadovoljen
+
+pod$Petal.Length[pod$Sepal.Width > 3.3]
+
+# mozemo uvjete kombinirati
+
+# svi redovi gdje su oba gornja uvjeta zadovoljena
+
+
+# radi i za stupce
+# imena stupaca
+
+
+ # logicki vektor koji ima true za sve stupce osim petog (koji je "Species")
+
+ # logicko indeksiranje makne stupac species
+
+# Ovo rjesenje za micanje stupca po imenu radi ako zelimo maknuti samo jedan stupac. 
+# Sto bi bilo ako bismo htjeli maknuti dva ili vise stupaca, npr. "Petal.Length" 
+# i "Petal.Width"? Za to bismo imali slican kod kao gore ali bismo umjesto != koristili
+# operator %in%. To mozete isprobati za vjezbu.
+
+# osim na cijeli data frame mozemo primijeniti logicko indeksiranje i na bilo koji vektor, npr. pod$Sepal.Width
+
+# vektor vrijedosti u Sepal.Width filtriran tako da ostanu samo one koje zadovoljavaju uvjet
+
+# u uvjetu možemo koristiti neki drugi vektor npr.
+
+# vektor vrijednosti u Sepal.Width filtriran tako da ostanu samo one gdje pripadni Petal.Length zadovoljava uvjet
+
+# uvjetno indeksiranje pomocu vektora indeksa
+
+# vraca skup indeksa gdje je uvjet zadovoljen
+
+
+# standardno indeksiranje pomocu vektora brojeva (koje smo dohvatili naredbom which)
+
+
+# naredba which je korisna ako zelimo saznati npr. na kojem indeksu u data frame-u ili u vektoru se nalazi neki element
+
+# ne znamo gdje je minimum
+
+# ovo nam dohvaca tocan indeks
+
+
+```
+```{r}
+
+library(tidyverse) # sluzi za grupirana, joinove, filtriranja
+
+iris %>% group_by(Species) %>% summarize(ProdjekSL = mean(Sepal.Length)) -> rez
+rez
+
+pod
+mean(pod$Sepal.Length)
+median(pod$Sepal.Length)
+
+# vrsta prosjek
+# setosa    5.006
+# versicolor    5.934
+# virginica   6.5
+
+```
+
+
+**Zadatak**
+
+Istražite skup podataka `iris` na sljedeće načine:
+
+1. Zanimaju nas samo latice i vrsta, stoga napravite `data.frame` koji ima samo stupce Petal.Width, Petal.Length i Species iz skupa podataka. Provjerite i pregledajte prvih nekoliko redaka novog `data.frame`-a.
+
+2. Volimo veliko cvijeće, zato filtirajte retke tako da ostanu samo oni gdje su i Petal.Length i Petal.Width veći od svojih prosjeka (prosjeke stupaca očitajte koristeći naredbu `summary()`).
+
+3. Razmotrite što vam naredba `summary()` vraća za varijable tipa `factor`. Koja je najčešća vrsta irisa u podatcima dobivenim iz prethodnog zadatka? 
+
+4. Naknadno smo dobili novi podatak. Ubacite novi redak s vrijednostima Petal.Length = 1.0, Petal.Width = 1.5, Species = "setosa" nakon podatka koji je trenutno u retku 7 (koristite rbind i neku vrstu filtriranja).
+
+
+## Učitavanje i manipulacija podatcima
+
+Osim ugrađenih skupova podataka, u R možemo učitati i podatke iz datoteka različitih formata. Ovisno o formatu, najčešće funkcije za učitavanje podataka su: `read.table()`, `read.csv()`, `read.xls()` i razne druge. Za učitavanje podataka s određene web-lokacije koristi se funkcija `read.url()`. Unutar ovih funkcija moguće je definirati razne detalje, npr. učitavanje zaglavlja, separator podataka, decimalni separator itd. Pri učitavanju podataka iz datoteka može se dogoditi da tipovi nekih varijabli budu krivo prepoznati -- u tom slučaju potrebno je provjeriti tipove i ručno ih ispraviti. Također, moguće je da u podatcima nedostaju neke vrijednosti, koje u učitanom `data.frame`-u poprimaju vrijednost `NA`. Iako je u brojnim funkcijama u R-u moguće postaviti parametar `na.rm = TRUE` kako bi se zanemarile ove vrijednosti, ponekad ih je korisno provjeriti (i eventualno izbaciti) po učitavanju podataka. 
+
+```{r}
+# ucitavanje podataka iz csv datoteke
+setwd("/Users/ialmer/Documents/Fakultet/6.semestar/sap")
+
+ # vidimo da se sve krivo ucitalo jer nije dobar separator pa cemo popraviti separator
+pod = read.table("iris_missing_vals[1].txt", sep=",")
+head(pod)
+# i sada je sve u redu
+
+# pretvaranje tipova stupaca ako se krivo ucitaju
+
+# klasa je numeric, a to nije dobro jer je to klasa cvijeca -- nominalna varijabla
+
+# "as.factor"" je samo wrapper oko funkcije "factor" koju smo vec koristili
+
+# sada je "factor" kako i treba biti
+
+
+
+# ako zelimo pretvoriti natrag u broj
+
+pod$Species = as.numeric(pod$Species)
+
+a = factor(c(12, 35, 23))
+b = as.numeric(as.character(a)) # prvo pretvoriti u string a tek onda u numeric jer se inace zezne
+b
+# nedostajuce vrijednosti
+is.na(pod$Petal.Length)
+pod$Petal.Length[11]
+
+# is.na ce nam vratiti logical vektor koji ima TRUE na mjestima gdje pod$Petal.Length ima NA
+# sum funkcija na logical vektorima broji TRUE kao 1 a FALSE kao 0, pa zapravo prebroji koliko elemenata vektora je TRUE
+
+
+# complete.cases ce vratiti logical vrijednost za svaki redak. Vrijednost je FALSE akko je *barem jedan* element retka NA
+sum(!complete.cases(pod))
+# tako je i najlakse izbaciti nedostajuce vrijednosti
+pod2 = pod[complete.cases(pod),]
+pod2
+
+
+
+```
+
+Obratite pozornost na to da izbacivanje redaka s nedostajućim vrijednostima nije uvijek najbolje rješenje. Npr., pretpostavimo da imamo 1000 podataka (redaka) opisanih sa 150 varijabli (stupaca), te u 90% njih varijabla pod rednim brojem 84. ima NA (ostale su prisutne). Ako bismo maknuli sve retke kod kojih funkcija `complete.cases()` poprima vrijednost `FALSE`, drastično bismo smanjili skup podataka (10 puta!). S druge strane, ako maknemo samo stupac 84, još uvijek imamo 1000 podataka (no jednu varijablu tj. stupac manje), što je mnogo bolje.
+
+## Mjere centralne tendencije
+
+Mjere centralne tendencije (ili središnje mjere) opisuju skup podataka jednom vrijednošću oko koje se podatci grupiraju. Najčešće korištene mjere centralne tendencije su: aritmetička sredina, medijan, mod, geometrijska sredina i harmonijska sredina.
+
+**Aritmetička sredina** u osnovnom se obliku računa pozivom funkcije `mean()`. Ista funkcija se s dodatnim ulaznim parametrom `trim` može koristiti i za računanje podrezane aritmetičke sredine.
+
+```{r}
+
+irisdata = iris
+# aritmeticka sredina
+
+mean(irisdata$Sepal.Length, trim=0.2)
+#summary(irisdata)
+
+# podrezana aritmeticka sredina s uklanjanjem po 20% najmanjih i najvecih podataka
+
+```
+
+
+**Medijan** je robusna mjera centralne tendencije čija je vrijednost takva da je točno 50\% podataka manje i 50\% podataka veće od te vrijednosti. Medijan možemo računati pozivom funkcije `median()`, a bilo koji drugi kvantil pozivom funkcije `quantile()`.
+
+```{r}
+# medijan
+
+median(irisdata$Sepal.Length)
+
+# 1., 2. i 3. kvartil
+
+?quantile
+quantile(irisdata$Sepal.Length, probs=c(0.25, 0.5, 0.75))
+
+```
+
+**Mod** je vrijednost koja se najčešće pojavljuje u podatcima. Funkcija za računanje moda je `mfv()` (skraćeno od *most frequent value*), a dostupna je u paketu `modeest`.
+
+```{r}
+
+# mod
+
+```
+
+
+**Zadatak**
+Izračunajte srednje vrijednosti i medijane duljina latica u cm (Petal.Length), zasebno za svaku od vrsta irisa u podatcima. Koliko se razlikuju srednje vrijednosti i medijani za svaku vrstu i što to govori o obliku distribucije? Pokušajte dobiti robusniju procjenu računajući podrezanu aritmetičku sredinu s uklanjanjem 15\% najvećih i najmanjih vrijednosti.
+
+```{r}
+irisdata
+names(pod)!="Species"
+mean(irisdata$Petal.Length[irisdata$Species=='setosa'])
+mean(irisdata$Petal.Length[irisdata$Species=='versicolor'])
+mean(irisdata$Petal.Length[irisdata$Species=='virginica'])
+
+aggregate(irisdata[,3], list(irisdata$Species), mean, trim=0.15)
+aggregate(irisdata[,3], list(irisdata$Species), median, trim=0.15)
+
+```
+
+## Mjere rasipanja
+Mjere rasipanja opisuju koliko su podatci koncentrirani ili rašireni, a najčešće korištene mjere su: rang, interkvartilni rang, varijanca, standardna devijacija i koeficijent varijacije.
+
+**Rang** je najjednostavnija mjera rasipanja i definirana je kao razlika između najvećeg i najmanjeg iznosa u podatcima. Moguće ju je jednostavno izračunati koristeći ugrađene funkcije `max()` i `min()`.
+
+```{r}
+# rang
+max(iris$Sepal.Length)
+min(iris$Sepal.Length)
+
+```
+
+**Interkvartilni rang** je nešto robusnija mjera rasipanja definirana kao razlika trećeg i prvog kvartila podataka. Računa se pozivom funkcije `IQR()` iz paketa `stats`.
+
+```{r}
+# interkvartilni rang
+IQR(irisdata$Sepal.Length)
+```
+
+**Varijanca** i **standardna devijacija** su možda najčešće korištene mjere rasipanja. Nepristranu procjenu varijance računamo pozivom funkcije `var()`, a procjenu standardne devijacije računamo pozivom funkcije `sd()` ili korjenovanjem rezultata dobivenog pozivom funkcije `var()`.
+
+```{r}
+# varijanca
+
+var(irisdata$Sepal.Length)
+# standardna devijacija
+sd(irisdata$Sepal.Length)
+```
+
+**Koeficijent varijacije** je relativna mjera rasipanja koja opisuje rasipanje podataka u odnosu na njihovu aritmetičku sredinu, izraženo u postotcima. Koeficijent varijacije može se izračunati pozivom funkcije `cv()` iz paketa `raster`.
+
+```{r}
+# ukljucivanje paketa raster, s iskljucenim ispisivanjem poruka (kako se u izvjescu ne bi pojavljivala upozorenja i poruke o paketu)
+suppressWarnings(require(raster,quietly = TRUE))
+
+# koeficijent varijacije
+cv(irisdata$Sepal.Length)
+
+```
+
+**Zadatak**
+
+Izračunajte interkvartilni rang (IQR) širina latica za svaku od vrsta irisa zasebno. Možemo li iz IQR-a zaključiti nešto o raspršenosti duljina latica različitih vrsta irisa? Izračunajte i koeficijente varijacije širina latica svake vrste irisa i usporedite ih.
+
+
+## Grafički prikazi podataka
+
+Jedan od osnovnih načina grafičkog prikazivanja podataka je **histogram**, koji pokazuje oblik distribucije i gustoću podataka, a zasnovan je na grupiranju varijabli u razrede. Prikaz histograma podataka može se dobiti funkcijom `hist()` iz paketa `graphics`. Parametrima funkcije moguće je podesiti razrede (broj razreda, točne granice razreda, način izračuna razreda), prikaz frekvencija ili relativnih frekvencija, izgled grafa (naslov, oznake, boje) te ostale detalje.
+
+```{r}
+# histogram duljine lapa s cca. 20-30 razreda (broj razreda shvaca kao "sugestiju")
+# ggplot
+hist(irisdata$Sepal.Length, breaks=25,prob=TRUE) # true podesava visine stupaca tako da je umnozak sirine i visine svih stupaca 1
+
+names(irisdata)
+list(irisdata$Species)
+
+aggregate(irisdata[,1], list(irisdata$Species), IQR)
+
+# histogram s prikazom relativnih frekvencija
+
+```
+
+
+**Pravokutni dijagram** (box plot) kombinira prikaz medijana, kvartila podataka, te najmanje i najveće vrijednosti. Pravokutni dijagram prikazuje i stršeće vrijednosti, koje se standardno definiraju kao podatci koji su iznad $Q_3 + 1.5\cdot IQR$ ili ispod $Q_1 - 1.5\cdot IQR$. Pravokutni dijagram moguće je prikazati koristeći funkciju `boxplot()` iz paketa `graphics`.
+
+```{r}
+# pravokutni dijagram duljine lapa, s postavljenim naslovom i oznakom na y osi
+boxplot(irisdata$Sepal.Length)
+
+# vrijednosti pravokutnog dijagrama dolaze iz deskriptivne statistike
+
+```
+
+Moguće je kombinirati više pravokutnih dijagrama za različite varijable, u svrhu usporedbe podataka.
+
+```{r}
+# pravokutni dijagram duljina i sirina latica
+
+```
+
+**Dijagram raspršenja** (scatter plot) jedan je od najvažnijih načina prikaza bivarijantnih podataka, te daje informaciju o povezanosti varijabli. Dijagram raspršenja se može prikazati funkcijom `plot()` iz paketa `graphics`. Detalji prikaza mogu se definirati parametrima funkcije.
+
+```{r}
+# dijagram rasprsenja duljine i sirine lapa, s postavljenim oznakama na x i y osima
+plot(irisdata$Petal.Length, irisdata$Sepal.Length, col=irisdata$Species)
+
+plot(irisdata$Sepal.Width, irisdata$Petal.Length, col=irisdata$Species)
+irisdata[irisdata$Species=='virginica']
+mean(irisdata$Petal.Length[irisdata$Species=='virginica'])
+
+```
+
+Funkcijama `lines()` i `points()` moguće je kombinirati više podataka na istom grafu.
+
+```{r}
+# dijagram rasprsenja duljine i sirine lapa s razlicitim bojama za dvije vrste irisa
+
+```
+
+**Zadatak**
+
+Prikažite histogram duljina latica (Petal.Length) s prikladnim brojem razreda, za sve vrste irisa zajedno. Možemo li iz oblika distribucije zaključiti nešto o mogućem grupiranju podataka? Prikažite histograme duljina latica za svaku vrstu irisa zasebno i usporedite ih s njihove mjerama centralne tendencije (iz jednog od prethodnih zadataka).
+
+Prikažite pravokutnim dijagramom usporedbu duljina latica (Petal.Length) za svaku vrstu irisa.
+
+Prikažite dijagramom raspršenja odnos duljina latica (Petal.Length) i širina latica (Petal.Width). Podatke za svaku vrstu irisa prikažite različitom bojom. Što možemo zaključiti o svojstvima latica za različite vrste?
