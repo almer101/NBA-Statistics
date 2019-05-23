@@ -124,10 +124,28 @@ Dobiveni su podaci kao i ocekivani, pozicije G (Guards) ne zahtijevaju da su igr
 
 ```{r}
 
+seasons.stats$TS.
 
-seasons.stats %>% filter(!is.na(X3PA)) %>% group_by(Age) %>% summarize(x3paAvgByAge = mean(X3PA)) -> x3paAverageByAge
-x3paAverageByAge
-plot(x3paAverageByAge$Age, x3paAverageByAge$x3paAvgByAge)
+top.10.colleges = c(
+  'Duke University', 
+  'North Carolina State University',
+  'University of Kentucky',
+  'Kansas State University',
+  'Michigan State University',
+  'Villanova University',
+  'Indiana University',
+  'University of Michigan',
+  'University of Louisville',
+  'Syracuse University'
+)
+season.player.nice.data = inner_join(seasons.stats, player.data, by=c("Player" = "name"))
+
+season.player.nice.data %>% filter(college %in% top.10.colleges) %>% group_by(college) %>% summarize(tsAverage = mean(TS.)) -> tsAverage
+tsAverageData = tsAverage[complete.cases(tsAverage),]
+tsAverageData
+dim(tsAverageData)
+
+plot(tsAverageData$college, tsAverageData%)
 
 ```
 
