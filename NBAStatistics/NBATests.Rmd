@@ -1,0 +1,33 @@
+---
+title: "NBATests"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Data input }
+
+seasons.stats = read.csv(file = "../data/Seasons_Stats.csv", header = TRUE)
+head(seasons.stats)
+
+```
+
+```{r SG position 3P shoots compared to C }
+
+sg.players = seasons.stats[seasons.stats$Pos=="SG" & seasons.stats$Year > 2016,]
+c.players = seasons.stats[seasons.stats$Pos=="C" & seasons.stats$Year > 2016,]
+
+sg.players
+c.players
+
+summary(sg.players)
+summary(c.players)
+
+?t.test
+t.test(sg.players$X3P., c.players$X3P., alt="greater", var.equal = FALSE)
+
+```
+
