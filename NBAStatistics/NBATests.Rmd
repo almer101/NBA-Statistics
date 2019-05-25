@@ -17,8 +17,8 @@ head(seasons.stats)
 
 ```{r SG position 3P shoots compared to C }
 
-sg.players = seasons.stats[seasons.stats$Pos=="SG" & seasons.stats$Year > 2016,]
-c.players = seasons.stats[seasons.stats$Pos=="C" & seasons.stats$Year > 2016,]
+sg.players = seasons.stats[seasons.stats$Pos=="SG" & seasons.stats$Year > 2010,]
+c.players = seasons.stats[seasons.stats$Pos=="C" & seasons.stats$Year > 2010,]
 
 sg.players
 c.players
@@ -28,6 +28,213 @@ summary(c.players)
 
 ?t.test
 t.test(sg.players$X3P., c.players$X3P., alt="greater", var.equal = FALSE)
+
+```
+
+```{r}
+
+seasons.stats$Player = as.character(seasons.stats$Player)
+seasons.stats$Tm = as.character(seasons.stats$Tm)
+
+seasons.stats
+seasons.stats %>% filter(Year > 1980) -> filtered
+player.teams = filtered %>% distinct(filtered$Player, filtered$Tm)
+dim(player.teams)
+
+names(player.teams) = c("Player", "Tm")
+
+player.teams = player.teams[complete.cases(player.teams),]
+player.teams
+
+player.teams %>% group_by(Player) %>% summarize(team.count = length(Tm)) -> player.number.of.teams
+
+# remove the first empty row
+player.number.of.teams = player.number.of.teams[-c(1),]
+player.number.of.teams[player.number.of.teams$Player == "George Johnson",]
+
+player.pers = seasons.stats[c("Player", "PER")]
+player.pers = player.pers[complete.cases(player.pers),]
+player.pers %>% group_by(Player) %>% summarize(avg.per = mean(PER)) -> player.per
+player.per
+
+player.teams.per = inner_join(player.number.of.teams, player.per, by=c("Player" = "Player"))
+player.teams.per
+
+summary(player.teams.per$team.count)
+
+player.teams.per = player.teams.per[player.teams.per$team.count < 10, ]
+seasons.stats[seasons.stats$Player == "George Johnson", ]
+
+boxplot(player.teams.per$team.count)
+hist(player.teams.per$team.count)
+
+players.one.team = player.teams.per[player.teams.per$team.count == 1,]
+players.multiple.teams = player.teams.per[player.teams.per$team.count > 1,]
+
+summary(players.one.team$avg.per)
+summary(players.multiple.teams$avg.per)
+
+players.one.team = 
+players.multiple.teams
+
+dim(players.one.team)
+dim(players.multiple.teams)
+
+t.test(players.one.team$avg.per, players.multiple.teams$avg.per, alt="less", var.equal = FALSE)
+
+```
+```{r}
+
+the.great.three = factor(c("Michael Jordan*", "Kobe Bryant", "LeBron James"))
+
+seasons.stats %>% filter(Player %in% the.great.three) %>% group_by(Player) %>% summarize(per.avg = mean(PER), ts.avg = mean(TS.), turnovers.avg = mean(TOV), mp.avg = mean(MP), bpm.avg = mean(BPM), fouls.avg = mean(PF)) -> the.great.three.stats
+
+michael = the.great.three.stats[the.great.three.stats$Player=="Michael Jordan*",]
+kobe = the.great.three.stats[the.great.three.stats$Player=="Kobe Bryant",]
+lebron = the.great.three.stats[the.great.three.stats$Player=="LeBron James",]
+
+```
+
+
+```{r}
+
+players = read.csv(file="../data/Players.csv")
+player.data = read.csv(file="../data/player_data.csv")
+players
+player.data
+
+combined.player.data = inner_join(players, player.data, by=c("Player" = "name"))
+combined.player.data
+
+combined.player.data %>% filter(position=="C") -> centers.data
+combined.player.data %>% filter(position=="G") -> guards.data
+
+t.test(centers.data$height.x, guards.data$height.x, alternative = "greater", var.equal = TRUE)
+hist(centers.data$height.x, prob = TRUE, col="skyblue", border=F)
+hist(guards.data$height.x,add=T, prob = TRUE,col=scales::alpha('red', .5),border=F)
+
+```
+
+```{r Drazen Petrovic vs Vlade Divac }
+
+vlade.divac = seasons.stats[seasons.stats$Player == "Vlade Divac",]
+vlade.divac
+
+drazen.petrovic = seasons.stats[seasons.stats$Player == "Drazen Petrovic*",]
+drazen.petrovic
+
+# to be continued...
+
+```
+
+```{r Foreigners vs Americans Turnovers }
+
+usa.states = factor(c(
+  "Alabama", 
+  "Alaska", 
+  "Arizona", 
+  "Arkansas", 
+  "California", 
+  "Colorado", 
+  "Connecticut", 
+  "Delaware", 
+  "Florida", 
+  "Georgia", 
+  "Hawaii", 
+  "Idaho", 
+  "Illinois",
+  "Indiana", 
+  "Iowa", 
+  "Kansas", 
+  "Kentucky", 
+  "Louisiana", 
+  "Maine", 
+  "Maryland", 
+  "Massachusetts", 
+  "Michigan", 
+  "Minnesota", 
+  "Mississippi", 
+  "Missouri", 
+  "Montana",
+  "Nebraska", 
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio", 
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
+  "District of Columbia"
+))
+
+players
+seasons.stats
+seasons.stats$Player = as.factor(seasons.stats$Player)
+
+joined.seasons.stats.players = inner_join(seasons.stats,players, by=c("Player"="Player"))
+joined.seasons.stats.players
+
+joined.seasons.stats.players %>% group_by(Player, birth_state) %>% summarize(avg.turnover = mean(TOV)) -> players.turnovers
+
+players.turnovers %>% filter(!(birth_state %in% usa.states)) -> non.usa.players
+players.turnovers %>% filter(birth_state %in% usa.states) -> usa.players
+
+usa.players = usa.players[complete.cases(usa.players),]
+non.usa.players = usa.players[complete.cases(non.usa.players),]
+
+dim(usa.players)
+dim(non.usa.players)
+
+usa.players = usa.players[sample(nrow(usa.players), 500),]
+non.usa.players = non.usa.players[sample(nrow(non.usa.players), 500),]
+
+summary(usa.players$avg.turnover)
+summary(non.usa.players$avg.turnover)
+
+t.test(usa.players$avg.turnover, non.usa.players$avg.turnover, alternative = "greater", var.equal = FALSE)
+
+```
+
+```{r}
+
+player.data$career.duration = player.data$year_end - player.data$year_start
+player.data
+
+boxplot(player.data$career.duration)
+hist(player.data$career.duration)
+
+```
+
+```{r Drazen Petrovic vs Michael Jordan }
+
+# bootstrap(podaci, N, statistika)
+drazen.petrovic = seasons.stats[seasons.stats$Player == "Drazen Petrovic*",]
+drazen.petrovic
+
+drazen.petrovic$PPG = drazen.petrovic$PTS / drazen.petrovic$G
+drazen.petrovic
+
+thetastar = bootstrap(drazen.petrovic$PPG, 10000, mean)$thetastar
+summary(thetastar)
+hist(thetastar, prob=TRUE)
+
+
 
 ```
 

@@ -173,6 +173,7 @@ v
 
 bootstrapinterval <- function(podaci, alfa, f, N){
   # upišite vaš kod ovdje
+  ?bootstrap
   dist = bootstrap(podaci, N, f)$thetastar
   lb = quantile(dist, alfa / 2) 
   ub = quantile(dist, 1 - alfa / 2)
@@ -308,7 +309,7 @@ par(mfrow=c(1,1))
 
 load('bike.sharing')
 fit = lm(cnt~temp,data=bike.sharing)
-
+fit
 
 
 ```
