@@ -14,41 +14,23 @@ head(seasons.stats)
 
 ```
 
+## Provjera ovisnosti 3PA o godini linearnom regresijom
+
+Samim pogledom na graf ovisnosti 3PA po utakmici o godini vidljivo je da postoji određena korelacija između te dvije vrijednosti.
+To nas je inspiriralo da napravimo linearnu regresiju da vidimo u kojoj mjeri zaista vrijedi ta ovisnost.
 
 ```{r}
 
 library(tidyverse) # sluzi za grupiranja, joinove, filtriranja
 
-# plotting average points per year through all seasons
-seasons.stats %>% group_by(Year) %>% summarize(avg.PTS = mean(PTS)) -> average.points
-average.points
-plot(average.points, xlab = "Year", ylab = "Average points")
-
 # plotting average three and two point attempts per year
 season.stats.points = seasons.stats[c('Year', 'X3PA', 'X2PA', 'G')]
 
 season.stats.points$X3PAPerGame = season.stats.points$X3PA / season.stats.points$G
-season.stats.points$X2PAPerGame = season.stats.points$X2PA / season.stats.points$G
 season.stats.points.complete = season.stats.points[complete.cases(season.stats.points),]
 
 season.stats.points.complete %>% group_by(Year) %>% summarize(ThreePointAttempts = mean(X3PAPerGame)) -> three.point.attempts
-season.stats.points.complete %>% group_by(Year) %>% summarize(TwoPointAttempts = mean(X2PAPerGame)) -> two.point.attempts
 
-three.point.attempts
-two.point.attempts
-
-# plotting three and two point attempts through the years
-plot(
-  three.point.attempts$Year, 
-  three.point.attempts$ThreePointAttempts, 
-  xlim = c(min(three.point.attempts$Year), max(three.point.attempts$Year)),
-  ylim = c(min(three.point.attempts$ThreePointAttempts), max(three.point.attempts$ThreePointAttempts)),
-  xlab = "Year",
-  ylab = "3PA per game",
-  col = 'blue'
-)
-
-three.point.attempts
 test.data = three.point.attempts[three.point.attempts$Year > 2010,]
 three.point.attempts = three.point.attempts[three.point.attempts$Year <= 2010,]
 
@@ -56,20 +38,29 @@ fit = lm(ThreePointAttempts~Year, data=three.point.attempts)
 summary(fit)
 
 fit$coefficients
-plot(three.point.attempts$Year, three.point.attempts$ThreePointAttempts)
-lines(three.point.attempts$Year, fit$fitted.values, col='skyblue')
 
+plot(
+  three.point.attempts$Year, 
+  three.point.attempts$ThreePointAttempts, 
+  xlab = "Godina", 
+  ylab = "3PA po utakmici"
+)
+lines(
+  three.point.attempts$Year, 
+  fit$fitted.values, 
+  col = 'skyblue'
+)
+
+# dijagram reziduala
 plot(fit$residuals)
 
+# qq plot
 qqnorm(rstandard(fit))
 qqline(rstandard(fit))
 
 ks.test(rstandard(fit),'pnorm')
 
 prediction = predict(fit,data=test.data, interval = "confidence")
-prediction
 
 actual <- data.frame(cbind(actuals=three.point.attempts$ThreePointAttempts, predicteds=prediction))
-actual
 ```
-

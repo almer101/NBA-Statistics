@@ -11,51 +11,64 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r Data input }
 
 seasons.stats = read.csv(file = "../data/Seasons_Stats.csv", header = TRUE)
-head(seasons.stats)
+
+players = read.csv(file="../data/Players.csv")
+player.data = read.csv(file="../data/player_data.csv")
 
 ```
 
+## Usporedba 3P bacanja za pozicije centra i shooting garda
+
+Pokušali smo otkloniti zavisnost među podacima tako što smo uzeli prosjek trica po svakom igraču, za svaku poziciju. Zatim smo izvršili t-test na dobivenim podacima.
+
 ```{r SG position 3P shoots compared to C }
 
-sg.players = seasons.stats[seasons.stats$Pos=="SG" & seasons.stats$Year > 2010,]
-c.players = seasons.stats[seasons.stats$Pos=="C" & seasons.stats$Year > 2010,]
+# selekcija shooting gard igrača koji su igrali nakon 2010. godine
+sg.players = seasons.stats[seasons.stats$Pos == "SG" & seasons.stats$Year > 2010,][c('Player', 'X3P.')]
+# selekcija centara koji su igrali nakon 2010. godine
+c.players = seasons.stats[seasons.stats$Pos == "C" & seasons.stats$Year > 2010,][c('Player', 'X3P.')]
 
-sg.players
-c.players
+sg.players.complete = sg.players[complete.cases(sg.players),]
+c.players.complete = c.players[complete.cases(c.players),]
+
+# grupiranje sg.players tablice po igračima kako bismo otklonili ovisnosti među podacima
+sg.players.complete %>% group_by(Player) %>% summarize(X3P.Average = mean(X3P.)) -> sg.3p.shoots
+c.players.complete %>% group_by(Player) %>% summarize(X3P.Average = mean(X3P.)) -> c.3p.shoots
 
 summary(sg.players)
 summary(c.players)
 
-?t.test
+# H0: prosjecan 3P% SG = prosjecan 3P% C
+# H1: prosjecan 3P% SG > prosjecan 3P% C
 t.test(sg.players$X3P., c.players$X3P., alt="greater", var.equal = FALSE)
 
 ```
 
-```{r}
+## Usporedba PER (Player efficiency rating) statistike za igrače koji su u karijeri igrali u 1 timu i za igrače koji su igrali u više timova (nakon 1980.)
+
+Na temelju prikupljenih podataka iz deskriptivne statistike htjeli smo testom pokazati da je osjetna razlika između igrača koji su igrali u 1 timu u svojoj NBA karijeri u odnosu na one koji su igrali u više. U obzir smo uzeli statistiku PER (efikasnost igrača) te smo došli do zaključka da igrači koji su igrali u više timova imaju očito veći PER.
+
+```{r One and Multiple Teams in NBA career}
 
 seasons.stats$Player = as.character(seasons.stats$Player)
 seasons.stats$Tm = as.character(seasons.stats$Tm)
 
-seasons.stats
+# filtriranje igraca koji su igrali nakon 1980. godine
 seasons.stats %>% filter(Year > 1980) -> filtered
 player.teams = filtered %>% distinct(filtered$Player, filtered$Tm)
-dim(player.teams)
 
 names(player.teams) = c("Player", "Tm")
 
 player.teams = player.teams[complete.cases(player.teams),]
-player.teams
 
+# određivanje broja timova za svakog igraca
 player.teams %>% group_by(Player) %>% summarize(team.count = length(Tm)) -> player.number.of.teams
 
-# remove the first empty row
 player.number.of.teams = player.number.of.teams[-c(1),]
-player.number.of.teams[player.number.of.teams$Player == "George Johnson",]
 
 player.pers = seasons.stats[c("Player", "PER")]
 player.pers = player.pers[complete.cases(player.pers),]
 player.pers %>% group_by(Player) %>% summarize(avg.per = mean(PER)) -> player.per
-player.per
 
 player.teams.per = inner_join(player.number.of.teams, player.per, by=c("Player" = "Player"))
 player.teams.per
@@ -63,10 +76,19 @@ player.teams.per
 summary(player.teams.per$team.count)
 
 player.teams.per = player.teams.per[player.teams.per$team.count < 10, ]
-seasons.stats[seasons.stats$Player == "George Johnson", ]
 
-boxplot(player.teams.per$team.count)
-hist(player.teams.per$team.count)
+# pravokutni dijagram za prikaz broja timova po igracu
+boxplot(
+  player.teams.per$team.count, 
+  main = "Broj timova po igracu"
+)
+# distribucija broja timova po igracu
+hist(
+  player.teams.per$team.count, 
+  xlab = "Broj timova po igracu", 
+  ylab = "Frekvencija", 
+  main = "Distribucija broja timova po igracu"
+)
 
 players.one.team = player.teams.per[player.teams.per$team.count == 1,]
 players.multiple.teams = player.teams.per[player.teams.per$team.count > 1,]
@@ -74,58 +96,76 @@ players.multiple.teams = player.teams.per[player.teams.per$team.count > 1,]
 summary(players.one.team$avg.per)
 summary(players.multiple.teams$avg.per)
 
-players.one.team = 
-players.multiple.teams
-
-dim(players.one.team)
-dim(players.multiple.teams)
-
-t.test(players.one.team$avg.per, players.multiple.teams$avg.per, alt="less", var.equal = FALSE)
+# H0: prosjecan PER igraca s 1 timom = prosjecan PER igraca s vise timova
+# H1: prosjecan PER igraca s 1 timom < prosjecan PER igraca s vise timova
+t.test(players.one.team$avg.per, players.multiple.teams$avg.per, alt = "less", var.equal = FALSE)
 
 ```
+
+## Velika trojka: Michael Jordan vs. Kobe Bryant vs. LeBron James
+
+Htjeli smo svesti njihove karijere u par statistika: prosječni PER, prosječni TS, prosječni turnovers, prosječna minutaža, prosječni BPM, prosječan broj prekršaja.
+
 ```{r}
 
 the.great.three = factor(c("Michael Jordan*", "Kobe Bryant", "LeBron James"))
 
 seasons.stats %>% filter(Player %in% the.great.three) %>% group_by(Player) %>% summarize(per.avg = mean(PER), ts.avg = mean(TS.), turnovers.avg = mean(TOV), mp.avg = mean(MP), bpm.avg = mean(BPM), fouls.avg = mean(PF)) -> the.great.three.stats
 
-michael = the.great.three.stats[the.great.three.stats$Player=="Michael Jordan*",]
-kobe = the.great.three.stats[the.great.three.stats$Player=="Kobe Bryant",]
-lebron = the.great.three.stats[the.great.three.stats$Player=="LeBron James",]
+michael = the.great.three.stats[the.great.three.stats$Player == "Michael Jordan*",]
+kobe = the.great.three.stats[the.great.three.stats$Player == "Kobe Bryant",]
+lebron = the.great.three.stats[the.great.three.stats$Player == "LeBron James",]
+
+michael
+kobe
+lebron
 
 ```
 
+## Usporedba visine igrača koji su igrali centra i igrača koji su igrali guard poziciju
+
+S obzirom da smo deskriptivnom statistikom zaključili da visina igrača jako utječe na njihovu ulogu u igri. Testnom statistikom htjeli smo to i pokazati.
 
 ```{r}
 
 players = read.csv(file="../data/Players.csv")
 player.data = read.csv(file="../data/player_data.csv")
-players
-player.data
 
 combined.player.data = inner_join(players, player.data, by=c("Player" = "name"))
 combined.player.data
 
-combined.player.data %>% filter(position=="C") -> centers.data
-combined.player.data %>% filter(position=="G") -> guards.data
+combined.player.data %>% filter(position == "C") -> centers.data
+combined.player.data %>% filter(position == "G") -> guards.data
 
+# H0: visina centara = visina guardova
+# H1: visina centara > visina guardova
 t.test(centers.data$height.x, guards.data$height.x, alternative = "greater", var.equal = TRUE)
-hist(centers.data$height.x, prob = TRUE, col="skyblue", border=F)
-hist(guards.data$height.x,add=T, prob = TRUE,col=scales::alpha('red', .5),border=F)
+
+hist(
+  centers.data$height.x, 
+  prob = TRUE, 
+  col = "skyblue", 
+  border = F, 
+  xlab = "Visina igraca", 
+  ylab = "Relativna frekvencija",
+  main = "Distribucije visina igraca"
+)
+hist(
+  guards.data$height.x,
+  add = T, 
+  prob = TRUE,
+  col = scales::alpha('red', .5),
+  border = F, 
+  xlab = "Visina igraca", 
+  ylab = "Relativna frekvencija",
+  main = "Distribucije visina igraca"
+)
 
 ```
 
-```{r Drazen Petrovic vs Vlade Divac }
+## Izgubljena lopta: stranci vs. Amerikanci
 
-vlade.divac = seasons.stats[seasons.stats$Player == "Vlade Divac",]
-vlade.divac
-
-drazen.petrovic = seasons.stats[seasons.stats$Player == "Drazen Petrovic*",]
-drazen.petrovic
-
-# to be continued...
-
-```
+Budući da postoji tvrdnja da je lakše zabiti koš i igrati u NBA ligi, nego u primjerice, Europskoj ligi zbog razlike u pravilima, htjeli smo pokazati da je prosječan broj izgubljenih lopti stranaca u NBA-u statistički manji od Amerikanaca u NBA-u. Unatoč prethodno navedenoj teoriji, nismo uspjeli odbaciti nultu hipotezu da su prosječni brojevi izgubljenih lopti stranaca i Amerikanaca jednaki.
 
 ```{r Foreigners vs Americans Turnovers }
 
@@ -183,12 +223,10 @@ usa.states = factor(c(
   "District of Columbia"
 ))
 
-players
-seasons.stats
-seasons.stats$Player = as.factor(seasons.stats$Player)
+seasons.stats$Player = as.character(seasons.stats$Player)
+players$Player = as.character(players$Player)
 
 joined.seasons.stats.players = inner_join(seasons.stats,players, by=c("Player"="Player"))
-joined.seasons.stats.players
 
 joined.seasons.stats.players %>% group_by(Player, birth_state) %>% summarize(avg.turnover = mean(TOV)) -> players.turnovers
 
@@ -196,33 +234,49 @@ players.turnovers %>% filter(!(birth_state %in% usa.states)) -> non.usa.players
 players.turnovers %>% filter(birth_state %in% usa.states) -> usa.players
 
 usa.players = usa.players[complete.cases(usa.players),]
-non.usa.players = usa.players[complete.cases(non.usa.players),]
+non.usa.players = non.usa.players[complete.cases(non.usa.players),]
 
-dim(usa.players)
-dim(non.usa.players)
-
-usa.players = usa.players[sample(nrow(usa.players), 500),]
-non.usa.players = non.usa.players[sample(nrow(non.usa.players), 500),]
+usa.players = usa.players[sample(nrow(usa.players), 400),]
+non.usa.players = non.usa.players[sample(nrow(non.usa.players), 400),]
 
 summary(usa.players$avg.turnover)
 summary(non.usa.players$avg.turnover)
 
+# H0: broj izgubljenih lopti Amerikanaca = broj izgubljenih lopti stranaca
+# H1: broj izgubljenih lopti Amerikanaca > broj izgubljenih lopti stranaca
 t.test(usa.players$avg.turnover, non.usa.players$avg.turnover, alternative = "greater", var.equal = FALSE)
 
 ```
 
+## Prosječno trajanje NBA karijere igrača
+
+Deskriptivnom statistikom smo htjeli pokazati distribuciju trajanja NBA karijere.
+
 ```{r}
 
 player.data$career.duration = player.data$year_end - player.data$year_start
-player.data
 
-boxplot(player.data$career.duration)
-hist(player.data$career.duration)
+boxplot(
+  player.data$career.duration, 
+  main = "Trajanje NBA karijere igraca"
+)
+hist(
+  player.data$career.duration, 
+  xlab = "Trajanje karijere", 
+  ylab = "Frekvencija", 
+  main = "Trajanje NBA karijere igraca"
+)
+summary(player.data$career.duration)
 
 ```
 
+## Drazen Petrovic vs Michael Jordan
+
+Dražen Petrović i Michael Jordan igrali su na istoj poziciji (SG) što predstavlja odličan temelj za provođenje statistike. Kako je (nažalost) karijera Dražena Petrovića trajala puno kraće nego karijera Michaela Jordana odlučili smo iskoristiti Bootstrap metodu uzorkovanja i stvoriti podatke za Dražena Petrovića koji zapravo ne postoje i usporediti statistiku ove dvojice igrača kako bi potvrdili teoriju da je Dražen Petrović u svojoj kraćoj karijeri postigao puno bolje rezultate nego Michael Jordan.
+
 ```{r Drazen Petrovic vs Michael Jordan }
 
+require(bootstrap)
 # bootstrap(podaci, N, statistika)
 drazen.petrovic = seasons.stats[seasons.stats$Player == "Drazen Petrovic*",]
 drazen.petrovic
@@ -232,9 +286,15 @@ drazen.petrovic
 
 thetastar = bootstrap(drazen.petrovic$PPG, 10000, mean)$thetastar
 summary(thetastar)
-hist(thetastar, prob=TRUE)
 
-
+# graficki prikaz distribucije uzorkovanja srednje vrijednosti PPG statistike
+hist(
+  thetastar,
+  main = "Distribucija uzorkovanja srednje vrijednosti PPG statistike",
+  xlab = "Srednja vrijednost PPG",
+  ylab = "Frekvencija",
+  prob = TRUE
+)
 
 ```
 

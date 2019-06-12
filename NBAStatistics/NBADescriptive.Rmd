@@ -1,5 +1,5 @@
 ---
-title: "NBADescriptive"
+title: "Statistika za NBA"
 output: pdf_document
 ---
 
@@ -7,130 +7,140 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Opis podataka
-
-
+Učitavanje podataka i biblioteka.
 ```{r Data input }
 
 seasons.stats = read.csv(file = "../data/Seasons_Stats.csv", header = TRUE)
-head(seasons.stats)
-```
-
-``` {r Average 3PA/2PA }
-library(tidyverse) # sluzi za grupiranja, joinove, filtriranja
-
-# plotting average points per year through all seasons
-seasons.stats %>% group_by(Year) %>% summarize(avg.PTS = mean(PTS)) -> average.points
-average.points
-plot(average.points, xlab = "Year", ylab = "Average points")
-
-# plotting average three and two point attempts per year
-season.stats.points = seasons.stats[c('Year', 'X3PA', 'X2PA', 'G')]
-
-season.stats.points$X3PAPerGame = season.stats.points$X3PA / season.stats.points$G
-season.stats.points$X2PAPerGame = season.stats.points$X2PA / season.stats.points$G
-head(season.stats.points)
-season.stats.points.complete = season.stats.points[complete.cases(season.stats.points),]
-head(season.stats.points.complete)
-
-#x3paByYear %>% group_by(Year) %>% summarize(ThreePointAttempts = mean(X3PA)) -> threePointAttempts
-season.stats.points.complete %>% group_by(Year) %>% summarize(ThreePointAttempts = mean(X3PAPerGame)) -> three.point.attempts
-season.stats.points.complete %>% group_by(Year) %>% summarize(TwoPointAttempts = mean(X2PAPerGame)) -> two.point.attempts
-
-three.point.attempts
-two.point.attempts
-
-# plotting three and two point attempts through the years
-plot(
-  three.point.attempts$Year, 
-  three.point.attempts$ThreePointAttempts, 
-  xlim = c(min(three.point.attempts$Year), max(three.point.attempts$Year)),
-  ylim = c(min(three.point.attempts$ThreePointAttempts), max(three.point.attempts$ThreePointAttempts)),
-  xlab = "Year",
-  ylab = "3PA per game",
-  col = 'blue'
-)
-plot(three.point.attempts$Year, two.point.attempts$TwoPointAttempts, col='red')
-
-```
-# 
-
-Filozofija igre je 60-ih i 70-ih godina bila takva da je tempo igre je bio puno brzi, odnosno bilo je ukupno vise posjeda lopte.
-
-
-```{r Fouls and Free throw attempts per year }
-
-
-seasons.stats %>% group_by(Year) %>% summarize(PFAvg = mean(PF)) -> average.fouls
-average.fouls
-plot(average.fouls)
-
-seasons.stats %>% group_by(Year) %>% summarize(FTAAvg = mean(FTA)) -> average.free.throw.attempts
-average.free.throw.attempts
-plot(average.free.throw.attempts)
-
-
-```
-
-NBA je entertainment industrija i gledanost im je jako bitan aspekt s obzirom da gledanost nosi profit. Foulovi usporavaju igru, i u korist tome govori i novo uvedeno pravilo, da se foulovi u kontri kaznjavaju nesportskim greskama (2 bacanja i posjed lopte), sto obeshrabruje obrambene igrace da rade foulove u kontri. Namjera tog pravila je da se kontre maksimalno dopustaju s obzirom da najcesce rezultiraju atraktivnom zavrsnicom sto pogoduje gledanosti.
-
-
-```{r}
-
-plot(seasons.stats$PF, seasons.stats$PTS)
-plot(seasons.stats$MP, seasons.stats$PF)
-
-```
-
-Vidi se lagani porast zbog korelacije izmedu 
-
-```{r}
-
-head(seasons.stats)
 player.data = read.csv("../data/player_data.csv")
 players = read.csv('../data/Players.csv')
 
-head(seasons.stats)
-head(player.data)
-head(players)
+library(tidyverse) # sluzi za grupiranja, joinove, filtriranja
 
+```
+
+# Deskriptivna statistika za NBA
+
+## Ovisnost prosječnog 3PA (pokušaji trica) i 2PA (pokušaji dvica) o godinama te jedan o drugom
+
+Filozofija igre je 60-ih i 70-ih godina bila takva da je tempo igre je bio puno brzi, odnosno bilo je ukupno vise posjeda lopte.
+Valja napomenuti zanimljivu činjenicu da je linija za tricu uvedena tek 80-ih zbog čega su podaci za iste navedeni tek od 80-ih pa nadalje. Skok u pokušajima trica je vidljiv 1996. iz razloga što je te godine linija za tricu pomaknuta bliže košu za skoro 60cm, ali je 1998. godine crta vraćena na staru poziciju. Razlog zbog kojeg je crta za tricu bila pomaknuta bliže košu je taj što su htjeli povećati broj bodova na utakmici.
+
+
+``` {r Average 3PA/2PA depending on the year}
+
+# prosječni broj poena (PTS) po godini
+seasons.stats %>% group_by(Year) %>% summarize(avg.PTS = mean(PTS)) -> average.points
+plot(average.points, xlab = "Godina", ylab = "Prosjecan broj poena")
+
+# projekcija tablice na godinu, 3PA, 2PA i G (broj utakmica)
+season.stats.points = seasons.stats[c('Year', 'X3PA', 'X2PA', 'G')]
+
+# prosječan broj 3PA i 2PA po igri
+season.stats.points$X3PAPerGame = season.stats.points$X3PA / season.stats.points$G
+season.stats.points$X2PAPerGame = season.stats.points$X2PA / season.stats.points$G
+
+# brisanje nepotpunih redaka
+season.stats.points.complete = season.stats.points[complete.cases(season.stats.points),]
+
+# prosječan broj 3PA i 2PA po godini po utakmici
+season.stats.points.complete %>% group_by(Year) %>% summarize(ThreePointAttempts = mean(X3PAPerGame)) -> three.point.attempts
+season.stats.points.complete %>% group_by(Year) %>% summarize(TwoPointAttempts = mean(X2PAPerGame)) -> two.point.attempts
+
+# grafički prikaz 3PA po godinama
+plot(
+  three.point.attempts$Year, 
+  three.point.attempts$ThreePointAttempts,
+  xlab = "Godina",
+  ylab = "3PA po utakmici",
+  col = 'blue'
+)
+
+# grafički prikaz 2PA po godinama
+plot(
+  two.point.attempts$Year, 
+  two.point.attempts$TwoPointAttempts, 
+  xlab = 'Godina',
+  ylab = '2PA po utakmici',
+  col = 'red'
+)
+
+```
+ 
+## Ovisnost prosječnog broja prekršaja i pokušaja slobodnih bacanja po godinama
+
+NBA je entertainment industrija i gledanost im je jako bitan aspekt s obzirom da gledanost nosi profit. Foulovi usporavaju igru i u korist tome govori novo uvedeno pravilo - da se prekršaji u kontri kažnjavaju nesportskim greškama (2 bacanja i posjed lopte), što obeshrabruje obrambene igrače da rade foulove u kontri. Namjera tog pravila je da se kontre maksimalno dopuštaju s obzirom da najčešće rezultiraju atraktivnom završnicom što pogoduje gledanosti.
+
+```{r Fouls and Free throw attempts per year }
+
+# prosjecan broj prekrsaja po godini
+seasons.stats %>% group_by(Year) %>% summarize(PFAvg = mean(PF)) -> average.fouls
+# graficki prikaz prosjecnog broja prekrsaja po godini
+plot(
+  average.fouls, 
+  xlab = "Godina", 
+  ylab = 'Prosjecan broj prekrsaja'
+)
+
+# prosjecan broj FTA (pokusaja slobodnih udaraca)
+seasons.stats %>% group_by(Year) %>% summarize(FTAAvg = mean(FTA)) -> average.free.throw.attempts
+# graficki prikaz prosjecnog broja slobodnih bacanja po godini
+plot(
+  average.free.throw.attempts, 
+  xlab = "Godina", 
+  ylab = 'Prosjecan broj pokusaja slobodnih bacanja'
+)
+
+```
+
+## Visine i mase igrača u NBA ligi
+
+Htjeli smo pokazati da visina utječe na prosječan broj zabijenih poena i to je prikazano na grafu u nastavku. Nažalost iz grafa se ne vidi nikakva korelacija između visine i zabijenih poena.
+
+```{r Height and weight in NBA}
+
+# prosjecan broj poena po igracu
 seasons.stats %>% group_by(Player) %>% summarize(PlayerPTSAvg = mean(PTS)) -> playerPTSAverage
-playerPTSAverage
 
-player.season.data = merge(x = playerPTSAverage, y = players, by = "Player", all.y = TRUE)
+playerPTSAverage$Player = as.character(playerPTSAverage$Player)
+players$Player = as.character(players$Player)
 
-head(player.season.data)
+# spajanje prosjecnog broja poena po igracu s informacijama o igracu
+player.season.data = inner_join(playerPTSAverage, players, by = c("Player" = "Player"))
 
+# graficki prikaz ovisnosti prosjecnog broja zabijenih poena o visini
 plot(player.season.data$height, player.season.data$PlayerPTSAvg)
-hist(player.season.data$height)
-hist(player.season.data$weight)
+
+# graficki prikazi distribucije visine i mase
+hist(
+  player.season.data$height, 
+  main = "Distribucija visine NBA igraca", 
+  xlab = "Visina", 
+  ylab = "Relativna frekvencija visine", 
+  probability = TRUE
+)
+hist(
+  player.season.data$weight, 
+  main = "Distribucija mase NBA igraca", 
+  xlab = "Masa", 
+  ylab = "Relativna frekvencija mase", 
+  probability = TRUE
+)
 
 player.heights.complete = player.season.data$height[complete.cases(player.season.data$height)]
 
-mean(player.heights.complete)
-median(player.heights.complete)
-sd(player.heights.complete)
+summary(player.heights.complete)
 
-boxplot(player.heights.complete, main='Players height boxplot', ylab='Players height [cm]')
-
-min(player.heights.complete)
-max(player.heights.complete)
-
-```
-
-```{r}
-
-# grupiranje po pozicijama
-head(player.data)
-
-players.joined = inner_join(player.data, players, by=c("name" = "Player"))
-
-players.joined %>% group_by(position) %>% summarize(averageHeight = mean(height.y)) -> averageHeightForPlayersByPosition
-averageHeightForPlayersByPosition
-
-plot(averageHeightForPlayersByPosition$position, averageHeightForPlayersByPosition$averageHeight)
+boxplot(
+  player.heights.complete, 
+  main = 'Pravokutni dijagram visine igraca', 
+  ylab = 'Visina igraca [cm]'
+)
 
 ```
+
+## Visine igrača po pozicijama
+
+Htjeli smo pokazati da se visine igrača po pozicijama znatno razlikuju. To smo učinili ANOVA-om koja je dala izuzetno malu p-vrijednost što znači da možemo odbaciti hipotezu H0, tj. ne možemo tvrditi da se visine igrača po pozicijama ne razlikuju.
 
 Dobiveni su podaci kao i ocekivani, pozicije G (Guards) ne zahtijevaju da su igraci visoki, dok za pozicije F (Forward) i C (Center) se zahtijeva visina zbog uloge koje imaju u igri.
 
@@ -142,46 +152,103 @@ Centri (Centers - C) su zaduženi za "prljavi posao" u reketu (obrambeni i napad
 
 Valja napomenuti kako se u zadnje vrijeme sve više gubi tradicionalna podjela po pet pozicija, a sve se više gura tzv. "positionless basketball" gdje svaki trener kroji petorke na način koji mu odgovara protiv određenog protivnika te za željeni stil igre. Jedan od prijedloga modernih pozicija čine "ball-handleri" (koji najviše odgovaraju braničima), krila (koji najviše odgovaraju niskim krilima) i visoki (koji najviše odgovaraju visokim krilima i centrima).
 
-```{r Duke University vs Other in terms of True Shooting Percentage }
+```{r Height dependance on positions}
 
-library(tidyverse)
+players$Player = as.character(players$Player)
+player.data$name = as.character(player.data$name)
+players.joined = inner_join(player.data, players, by=c("name" = "Player"))
 
-seasons.stats$TS.
+# usporedni pravokutni dijagrami za distribuciju visine po pozicijama
+boxplot(
+  players.joined[players.joined$position == 'C',]$height.y,
+  players.joined[players.joined$position == 'C-F',]$height.y,
+  players.joined[players.joined$position == 'F',]$height.y,
+  players.joined[players.joined$position == 'F-C',]$height.y,
+  players.joined[players.joined$position == 'F-G',]$height.y,
+  players.joined[players.joined$position == 'G',]$height.y,
+  players.joined[players.joined$position == 'G-F',]$height.y
+)
 
-season.player.nice.data = inner_join(seasons.stats, player.data, by=c("Player" = "name"))
+# ANOVA - razlika izmedu visina po pozicijama
+players.joined %>% group_by(position) %>% summarize(averageHeight = mean(height.y)) -> averageHeightForPlayersByPosition
 
-season.player.nice.data %>% filter(college=="Duke University") -> duke.players
-duke.players
-
-summary(duke.players$TS.)
-hist(duke.players$TS.)
-
-season.player.nice.data %>% filter(college!="Duke University") -> not.duke.players
-summary(not.duke.players$TS.)
-hist(not.duke.players$TS.)
-
-plot(hist(duke.players$TS.), col='red')
-plot(hist(not.duke.players$TS.), col='blue', add=T)
-
-dg = 0
-gg = 1.2
-
-set.seed(42)
-hist(duke.players$TS., xlim=c(dg,gg), prob=TRUE, col='blue', border=F)
-hist(not.duke.players$TS., add=T, xlim=c(dg,gg), prob=TRUE, col=scales::alpha('red',.5), border=F)
-
-length(duke.players$TS.)
-length(not.duke.players$TS.)
-boxplot(duke.players$TS., not.duke.players$TS.)
-
-h0.mean = mean(not.duke.players$TS.)
-
-t.test(duke.players$TS., not.duke.players$TS., alternative="greater", var.equal = TRUE)
-t.test(duke.players$TS., not.duke.players$TS., alternative="greater", var.equal = FALSE)
+model = lm(players.joined$height.y ~ players.joined$position)
+anova(model)
 
 ```
+
+
+## Usporedba igrača s Duke University-ja u odnosu na druge fakultete u SAD-u
+
+Uspoređivali smo studente koji su draftani s Duke Universityja u odnosu na ostale, zato što se u današnjici Duke slovi kao sveučilište s najboljim programom za košarku.
+Htjeli smo pokazati da TS vrijednost za studente s Duke Universityja veći u odnosu ostale.
+
+```{r Duke University vs Other in terms of True Shooting Percentage }
+
+seasons.stats$Player = as.character(seasons.stats$Player)
+player.data$name = as.character(player.data$name)
+season.player.nice.data = inner_join(seasons.stats, player.data, by=c("Player" = "name"))
+
+# igraci koji su draftani s Duke Uneverityja
+season.player.nice.data %>% filter(college == "Duke University") -> duke.players
+
+summary(duke.players$TS.)
+hist(
+  main = "Distribucija TS vrijednosti",
+  xlab = "TS vrijednost",
+  ylab = "Frekvencija TS vrijednosti",
+  duke.players$TS.
+)
+
+# igraci koji su draftani s drugih sveucilista
+season.player.nice.data %>% filter(college != "Duke University") -> not.duke.players
+summary(not.duke.players$TS.)
+
+# donja granica
+dg = 0
+# gornja granica
+gg = 1.2
+
+# graficki prikaz frekvencije TS vrijednosti za igrace sa Duke universityja i ostalih
+# TS vrijednosti za igrace s Duke-a su oznaceni plavom bojom, dok su za ostale oznacene crvenom
+hist(
+  duke.players$TS., 
+  xlim = c(dg,gg), 
+  prob = TRUE, 
+  col = 'blue', 
+  border = F,
+  xlab = "TS vrijednost",
+  ylab = "Frekvencija",
+  main = "Distribucija TS vrijednosti"
+)
+hist(
+  not.duke.players$TS., 
+  add = T, 
+  xlim = c(dg,gg), 
+  prob = TRUE, 
+  col = scales::alpha('red',.5), 
+  border = F,
+  xlab = "TS vrijednost",
+  ylab = "Frekvencija",
+  main = "Distribucija TS vrijednosti"
+)
+
+# usporedni pravokutni dijagrami za TS vrijednosti igraca 
+boxplot(duke.players$TS., not.duke.players$TS.)
+
+# t.test(duke.players$TS., not.duke.players$TS., alternative = "greater", var.equal = TRUE)
+# t.test(duke.players$TS., not.duke.players$TS., alternative = "greater", var.equal = FALSE)
+
+```
+
+## Usporedba TS vrijednosti među sveučilištima s najboljim košarkaškim programom nakon 1990. godine
+
+Valja napomenuti kako su navedena sveučilišta najbolja na temelju trenutne ljestvice.
+Pošto svako sveučilište ima različitu politiku igranja, na temelju TS vrijednosti htjeli smo vidjeti kako se politike odražavaju na iste.
+
 ```{r Top 10 Universities True Shooting Percentage }
 
+# najboljih 10 sveucilista s kosarkaskim programom
 top.10.colleges = factor(c(
   'Duke University', 
   'University of North Carolina',
@@ -195,25 +262,26 @@ top.10.colleges = factor(c(
   'Syracuse University'
 ))
 
-season.player.nice.data
+# filtritanje igraca koji su igrali nakon 1990, a dosli su s nekog od najboljih 10 sveucilista
 season.player.nice.data %>% filter(Year > 1990 & college %in% top.10.colleges) -> seasons.stats.after.1990
+# projekcija na TS vrijednosti i svucilista
 seasons.stats.after.1990 = seasons.stats.after.1990[c("TS.", "college")]
-seasons.stats.after.1990
 seasons.stats.after.1990 = seasons.stats.after.1990[complete.cases(seasons.stats.after.1990),]
-seasons.stats.after.1990
 
+# prosjecna TS vrijednost po najboljih 10 sveucilista
 seasons.stats.after.1990 %>% group_by(college) %>% summarize(ts.college.average = mean(TS.)) -> avg.ts.top.10.colleges
-avg.ts.top.10.colleges
 
+# padajuci poredak po prosjecnoj TS vrijednosti
 avg.ts.top.10.colleges <- avg.ts.top.10.colleges[order(-avg.ts.top.10.colleges$ts.college.average),]
 avg.ts.top.10.colleges
 
+# graficki prikaz TS vrijednosti po 10 najboljih sveucilista
 barplot(
   avg.ts.top.10.colleges$ts.college.average,
   ylim = c(0, 0.6),
-  main = "Average TS value for top 10 universities in USA",
-  ylab = "Average TS [%]",
-  xlab = "College in USA",
+  main = "Prosjecna TS vrijednost po 10 najboljih sveucilista u SAD-u",
+  ylab = "Prosjecna TS vrijednost [%]",
+  xlab = "",
   names.arg = avg.ts.top.10.colleges$college,
   col = "steelblue",
   las = 2,
@@ -222,47 +290,60 @@ barplot(
 
 ```
 
+## Ovisnost 3PA o skoku u napadu
+
+Htjeli smo pokazati kako porastom pokušaja bacanja trica, raste i broj skokova u napadu, točnije rađa se više šansi da napadački igrač uhvati loptu koja se odbije nakon neuspjele trice. Rezultati su neugodno iznenadili, jer su pokazali upravo suprotno od očekivanog, odnosno da broj skokova u napadu pada s porastom pokušaja trica. Jedna točka na grafu ovisnosti ORB o 3PA označuje prosječnu godišnju ORB vrijednost za pridruženu 3PA vrijednost.
 
 ```{r Dependance of 3PA on Offensive Rebounds }
 
-head(seasons.stats)
-
+# projekcija na godinu, 3PA, ORB (skok u napadu), ORB. (postotak skokova u napadus)
 help.table = seasons.stats[c("Year", "X3PA", "ORB", "ORB.")]
-head(help.table)
 help.table = help.table[complete.cases(help.table),]
-help.table
 
+# prosjecan broj 3PA po godini
 help.table %>% group_by(Year) %>% summarize(three.point.attempts = mean(X3PA)) -> average.three.point.attempts.by.year
+# prosjecan broj ORB po godini
 help.table %>% group_by(Year) %>% summarize(offensive.rebounds = mean(ORB)) -> average.orb.by.year
+# prosjecan broj ORB% po godini
 help.table %>% group_by(Year) %>% summarize(offensive.rebounds.percentage = mean(ORB)) -> average.orb.percentage.by.year
 
-average.three.point.attempts.by.year
-average.orb.by.year
-
-plot(average.three.point.attempts.by.year)
-plot(average.orb.by.year)
-
-plot(average.three.point.attempts.by.year$three.point.attempts, average.orb.by.year$offensive.rebounds)
-plot(average.three.point.attempts.by.year$three.point.attempts, average.orb.percentage.by.year$offensive.rebounds.percentage)
-average.three.point.attempts.by.year$three.point.attempts
-average.orb.by.year$offensive.rebounds
-
-```
-```{r Kardashian Curse}
-khloe.kardashian.boyfriends = factor(c(
-  "Rashad McCants",
-  "Lamar Odom",
-  "James Harden",
-  "Tristan Thompson"
-))
-kim.kardashian.boyfriends = c(
-  "Kris Humphries"
+plot(
+  average.three.point.attempts.by.year, 
+  xlab = "Godina", 
+  ylab = "Vrijednost 3PA"
+)
+plot(
+  average.orb.by.year, 
+  xlab = "Godina", 
+  ylab = "Vrijednost ORB"
 )
 
-#seasons.stats
+plot(
+  average.three.point.attempts.by.year$three.point.attempts, 
+  average.orb.by.year$offensive.rebounds,
+  xlab = "3PA vrijednost",
+  ylab = "ORB vrijednost"
+)
 
-#seasons.stats %>% filter(Player == "Lamar Odom") -> boyfriends
-#boyfriends
+```
+
+## Kardashian Curse
+
+Postoji teorija da igrači koji su bili u vezi s Kardashiankama da je od tada putanja njihove karijere išla samo prema dolje. Treba napomenuti da za nedavne partnere nemamo podatke na temelju kojih bismo to mogli dokazati, ali činjenica je da je nekima karijera nakon toga završila što ide u korist toj teoriji.
+
+```{r Kardashian Curse}
+# kosarkasi koji su bili u vezi s Khloe Kardashian
+khloe.kardashian.boyfriends = factor(c(
+  "Rashad McCants", # 2009
+  "Lamar Odom", # 2009 - 2013
+  "James Harden", # 2015 (trajala je kratko)
+  "Tristan Thompson" # 2016 - 2019
+))
+
+# kosarkasi koji su bili u vezi s Kim Kardashian
+kim.kardashian.boyfriends = c(
+  "Kris Humphries" # 2010 - 2011
+)
 
 bar_plot_boyfriends <- function(boyfriends) {
   for (boyfriend in boyfriends) {
@@ -271,11 +352,12 @@ bar_plot_boyfriends <- function(boyfriends) {
       boyfriend.data$mp.sum,
       main = boyfriend,
       names.arg = boyfriend.data$Year,
-      ylab = "Minutes played [s]",
-      xlab = "Year",
+      ylab = "Broj odigranih minuta",
+      xlab = "Godina",
       col = "steelblue",
       space = 0.3
     )
+    print("")
   }
 }
 
@@ -284,7 +366,12 @@ bar_plot_boyfriends(kim.kardashian.boyfriends)
 
 ```
 
-``` {r Ratio of countries in NBA League}
+## Udio stranih igrača u NBA ligi u odnosu na igrače iz SAD-a po desetljećima
+
+Za očekivati je da će tijekom vremena zbog globalizacije i ostalih uzroka udio stranih igrača rasti. Uspjeli smo pokazati da je kroz desetljeća zbilja bio u porastu. Iznimka su 1960.-e godine u kojima se bilježi pad u odnosu na prethodno desetljeće, za što unatoč trudu, nismo uspijeli naći potencijalan uzrok. 
+
+```{r}
+
 usa.states = factor(c(
   "Alabama", 
   "Alaska", 
@@ -339,95 +426,315 @@ usa.states = factor(c(
   "District of Columbia"
 ))
 
-players
-players %>% group_by(birth_state) %>% summarize(count = length(Player)) -> countries.count
-countries.count %>% filter(birth_state %in% usa.states) %>% summarize(usa.sum = sum(count)) -> usa.players.count
-countries.count %>% filter(!(birth_state %in% usa.states)) -> countries.players
-countries.count
-usa.players.count
-
-new.row = data.frame(factor("USA"), usa.players.count)
-new.row
-
-countries.players = countries.players[-c(1),]
-
-names(new.row) = names(countries.players)
-countries.players = rbind(countries.players, new.row)
-countries.players
-
-countries.players <- countries.players[order(-countries.players$count),]
-countries.players
-
-countries.players %>% filter(count < 3000) %>% summarize(others.sum = sum(count)) -> others.count
-others.count
-countries.players %>% filter(count >= 3000) -> countries.players
-countries.players
-
-new.row = data.frame(factor("Others"), others.count)
-names(new.row) = names(countries.players)
-countries.players = rbind(countries.players, new.row)
-countries.players
-
-pie(countries.players$count, labels = countries.players$birth_state, main = "Ratio of countries in NBA")
-
-test = countries.players$count > 1000
-test
-
-countries.players[test,]
-
-```
-```{r}
-
 years = seq(1950, 2019, by=10)
-years
 
-"
-seasons.stats
-players
-test = seasons.stats$Year > 1960 & seasons.stats$Year < 1970
-test
-test = test[complete.cases(test)]
-combined = seasons.stats[test,]
-combined$Player <- as.factor(combined$Player)
-combined
-
-combined1 = inner_join(combined, players, by = c(Player = Player))
-combined1
-combined2 = combined1 %>% distinct(combined1$Player, combined1$birth_state)
-combined2"
-
-#distinct(seasons.stats$Player)
-
-decades = c()
-usa.counts = c()
-others.counts = c()
-
+count = 0
 for (year in years) {
-  test = seasons.stats$Year > year & seasons.stats$Year < (year + 10)
+  count = count + 1
+  test = seasons.stats$Year >= year & seasons.stats$Year < (year + 10)
   combined = seasons.stats[test,]
-  combined$Player = as.factor(combined$Player)
+  combined
+  combined$Player = as.character(combined$Player)
+  players$Player = as.character(players$Player)
   
-  combined.1 = inner_join(combined, players, by=c("Player" = "Player"))
-  combined.1$Player = as.character(combined.1$Player)
-  combined.1$birth_state = as.character(combined.1$birth_state)
-  combined.2 = combined.1 %>% distinct(combined.1$Player, combined.1$birth_state)
+  combined.1 = inner_join(combined, players, by=c('Player' = 'Player'))
+  combined.1
+  combined.names.countries = combined.1[c('Player','birth_state')]
+  combined.names.countries = combined.names.countries[complete.cases(combined.names.countries),]
   
-  decades <- c(decades, year)
+  combined.names.countries
+  combined.names.countries$birth_state = as.character(combined.names.countries$birth_state)
   
-  combined.2 %>% group_by(birth_state) %>% summarize(count = length(Player)) -> countries.count
-  countries.count %>% filter(birth_state %in% usa.states) %>% summarize(usa.sum = sum(count)) -> usa.players.count
-  usa.counts <- c(usa.counts, usa.players.count)
-
-  countries.count %>% filter(!(birth_state %in% usa.states)) %>% summarize(others.sum = sum(count)) -> other.players.count
-  others.count <- c(others.count, other.players.count)
+  combined.names.countries = combined.names.countries[combined.names.countries$birth_state != '',]
+  combined.names.countries
+  
+  combined.names.countries %>% filter(!(birth_state %in% usa.states)) %>% distinct(Player, birth_state) -> other.countries
+  combined.names.countries %>% filter(birth_state %in% usa.states) %>% distinct(Player, birth_state) -> usa.countries
+  
+  slices <- c(nrow(usa.countries), nrow(other.countries))  
+  lbls <- c("USA", "Others")
+  title = paste(as.character(year), '-', as.character(year + 9))
+  pie(slices, labels = lbls, main = title)
+  
+  if (count %% 2 == 0){
+    print("============================================================================")  
+  }
 }
 
-usa.counts
-other.counts
-df
+```
 
-?barplot
-table <- table(usa.counts, others.counts)
+# Testovi za NBA statistiku
+
+## Usporedba 3P bacanja za pozicije centra i shooting garda
+
+Pokušali smo otkloniti zavisnost među podacima tako što smo uzeli prosjek trica po svakom igraču, za svaku poziciju. Zatim smo izvršili t-test na dobivenim podacima.
+
+```{r SG position 3P shoots compared to C }
+
+# selekcija shooting gard igrača koji su igrali nakon 2010. godine
+sg.players = seasons.stats[seasons.stats$Pos == "SG" & seasons.stats$Year > 2010,][c('Player', 'X3P.')]
+# selekcija centara koji su igrali nakon 2010. godine
+c.players = seasons.stats[seasons.stats$Pos == "C" & seasons.stats$Year > 2010,][c('Player', 'X3P.')]
+
+sg.players.complete = sg.players[complete.cases(sg.players),]
+c.players.complete = c.players[complete.cases(c.players),]
+
+# grupiranje sg.players tablice po igračima kako bismo otklonili ovisnosti među podacima
+sg.players.complete %>% group_by(Player) %>% summarize(X3P.Average = mean(X3P.)) -> sg.3p.shoots
+c.players.complete %>% group_by(Player) %>% summarize(X3P.Average = mean(X3P.)) -> c.3p.shoots
+
+summary(sg.players)
+summary(c.players)
+
+# H0: prosjecan 3P% SG = prosjecan 3P% C
+# H1: prosjecan 3P% SG > prosjecan 3P% C
+t.test(sg.players$X3P., c.players$X3P., alt="greater", var.equal = FALSE)
 
 ```
 
+## Usporedba PER (Player efficiency rating) statistike za igrače koji su u karijeri igrali u 1 timu i za igrače koji su igrali u više timova (nakon 1980.)
+
+Na temelju prikupljenih podataka iz deskriptivne statistike htjeli smo testom pokazati da je osjetna razlika između igrača koji su igrali u 1 timu u svojoj NBA karijeri u odnosu na one koji su igrali u više. U obzir smo uzeli statistiku PER (efikasnost igrača) te smo došli do zaključka da igrači koji su igrali u više timova imaju očito veći PER.
+
+```{r One and Multiple Teams in NBA career}
+
+seasons.stats$Player = as.character(seasons.stats$Player)
+seasons.stats$Tm = as.character(seasons.stats$Tm)
+
+# filtriranje igraca koji su igrali nakon 1980. godine
+seasons.stats %>% filter(Year > 1980) -> filtered
+player.teams = filtered %>% distinct(filtered$Player, filtered$Tm)
+
+names(player.teams) = c("Player", "Tm")
+
+player.teams = player.teams[complete.cases(player.teams),]
+
+# određivanje broja timova za svakog igraca
+player.teams %>% group_by(Player) %>% summarize(team.count = length(Tm)) -> player.number.of.teams
+
+player.number.of.teams = player.number.of.teams[-c(1),]
+
+player.pers = seasons.stats[c("Player", "PER")]
+player.pers = player.pers[complete.cases(player.pers),]
+player.pers %>% group_by(Player) %>% summarize(avg.per = mean(PER)) -> player.per
+
+player.teams.per = inner_join(player.number.of.teams, player.per, by=c("Player" = "Player"))
+player.teams.per
+
+summary(player.teams.per$team.count)
+
+player.teams.per = player.teams.per[player.teams.per$team.count < 10, ]
+
+# pravokutni dijagram za prikaz broja timova po igracu
+boxplot(
+  player.teams.per$team.count, 
+  main = "Broj timova po igracu"
+)
+# distribucija broja timova po igracu
+hist(
+  player.teams.per$team.count, 
+  xlab = "Broj timova po igracu", 
+  ylab = "Frekvencija", 
+  main = "Distribucija broja timova po igracu"
+)
+
+players.one.team = player.teams.per[player.teams.per$team.count == 1,]
+players.multiple.teams = player.teams.per[player.teams.per$team.count > 1,]
+
+summary(players.one.team$avg.per)
+summary(players.multiple.teams$avg.per)
+
+# H0: prosjecan PER igraca s 1 timom = prosjecan PER igraca s vise timova
+# H1: prosjecan PER igraca s 1 timom < prosjecan PER igraca s vise timova
+t.test(players.one.team$avg.per, players.multiple.teams$avg.per, alt = "less", var.equal = FALSE)
+
+```
+
+## Velika trojka: Michael Jordan vs. Kobe Bryant vs. LeBron James
+
+Htjeli smo svesti njihove karijere u par statistika: prosječni PER, prosječni TS, prosječni turnovers, prosječna minutaža, prosječni BPM, prosječan broj prekršaja.
+
+```{r}
+
+the.great.three = factor(c("Michael Jordan*", "Kobe Bryant", "LeBron James"))
+
+seasons.stats %>% filter(Player %in% the.great.three) %>% group_by(Player) %>% summarize(per.avg = mean(PER), ts.avg = mean(TS.), turnovers.avg = mean(TOV), mp.avg = mean(MP), bpm.avg = mean(BPM), fouls.avg = mean(PF)) -> the.great.three.stats
+
+michael = the.great.three.stats[the.great.three.stats$Player == "Michael Jordan*",]
+kobe = the.great.three.stats[the.great.three.stats$Player == "Kobe Bryant",]
+lebron = the.great.three.stats[the.great.three.stats$Player == "LeBron James",]
+
+michael
+kobe
+lebron
+
+```
+
+## Usporedba visine igrača koji su igrali centra i igrača koji su igrali guard poziciju
+
+S obzirom da smo deskriptivnom statistikom zaključili da visina igrača jako utječe na njihovu ulogu u igri. Testnom statistikom htjeli smo to i pokazati.
+
+```{r}
+
+combined.player.data = inner_join(players, player.data, by=c("Player" = "name"))
+
+combined.player.data %>% filter(position == "C") -> centers.data
+combined.player.data %>% filter(position == "G") -> guards.data
+
+# H0: visina centara = visina guardova
+# H1: visina centara > visina guardova
+t.test(centers.data$height.x, guards.data$height.x, alternative = "greater", var.equal = TRUE)
+
+hist(
+  centers.data$height.x, 
+  prob = TRUE, 
+  col = "skyblue", 
+  border = F, 
+  xlab = "Visina igraca", 
+  ylab = "Relativna frekvencija",
+  main = "Distribucije visina igraca"
+)
+hist(
+  guards.data$height.x,
+  add = T, 
+  prob = TRUE,
+  col = scales::alpha('red', .5),
+  border = F, 
+  xlab = "Visina igraca", 
+  ylab = "Relativna frekvencija",
+  main = "Distribucije visina igraca"
+)
+
+```
+
+## Izgubljena lopta: stranci vs. Amerikanci
+
+Budući da postoji tvrdnja da je lakše zabiti koš i igrati u NBA ligi, nego u primjerice, Europskoj ligi zbog razlike u pravilima, htjeli smo pokazati da je prosječan broj izgubljenih lopti stranaca u NBA-u statistički manji od Amerikanaca u NBA-u. Unatoč prethodno navedenoj teoriji, nismo uspjeli odbaciti nultu hipotezu da su prosječni brojevi izgubljenih lopti stranaca i Amerikanaca jednaki.
+
+```{r Foreigners vs Americans Turnovers }
+
+seasons.stats$Player = as.character(seasons.stats$Player)
+players$Player = as.character(players$Player)
+
+joined.seasons.stats.players = inner_join(seasons.stats,players, by=c("Player"="Player"))
+
+joined.seasons.stats.players %>% group_by(Player, birth_state) %>% summarize(avg.turnover = mean(TOV)) -> players.turnovers
+
+players.turnovers %>% filter(!(birth_state %in% usa.states)) -> non.usa.players
+players.turnovers %>% filter(birth_state %in% usa.states) -> usa.players
+
+usa.players = usa.players[complete.cases(usa.players),]
+non.usa.players = non.usa.players[complete.cases(non.usa.players),]
+
+usa.players = usa.players[sample(nrow(usa.players), 400),]
+non.usa.players = non.usa.players[sample(nrow(non.usa.players), 400),]
+
+summary(usa.players$avg.turnover)
+summary(non.usa.players$avg.turnover)
+
+# H0: broj izgubljenih lopti Amerikanaca = broj izgubljenih lopti stranaca
+# H1: broj izgubljenih lopti Amerikanaca > broj izgubljenih lopti stranaca
+t.test(usa.players$avg.turnover, non.usa.players$avg.turnover, alternative = "greater", var.equal = FALSE)
+
+```
+
+## Prosječno trajanje NBA karijere igrača
+
+Deskriptivnom statistikom smo htjeli pokazati distribuciju trajanja NBA karijere.
+
+```{r}
+
+player.data$career.duration = player.data$year_end - player.data$year_start
+
+boxplot(
+  player.data$career.duration, 
+  main = "Trajanje NBA karijere igraca"
+)
+hist(
+  player.data$career.duration, 
+  xlab = "Trajanje karijere", 
+  ylab = "Frekvencija", 
+  main = "Trajanje NBA karijere igraca"
+)
+summary(player.data$career.duration)
+
+```
+
+## Drazen Petrovic vs Michael Jordan
+
+Dražen Petrović i Michael Jordan igrali su na istoj poziciji (SG) što predstavlja odličan temelj za provođenje statistike. Kako je (nažalost) karijera Dražena Petrovića trajala puno kraće nego karijera Michaela Jordana odlučili smo iskoristiti Bootstrap metodu uzorkovanja i stvoriti podatke za Dražena Petrovića koji zapravo ne postoje i usporediti statistiku ove dvojice igrača kako bi potvrdili teoriju da je Dražen Petrović u svojoj kraćoj karijeri postigao puno bolje rezultate nego Michael Jordan.
+
+```{r Drazen Petrovic vs Michael Jordan }
+
+require(bootstrap)
+# bootstrap(podaci, N, statistika)
+drazen.petrovic = seasons.stats[seasons.stats$Player == "Drazen Petrovic*",]
+
+drazen.petrovic$PPG = drazen.petrovic$PTS / drazen.petrovic$G
+
+thetastar = bootstrap(drazen.petrovic$PPG, 10000, mean)$thetastar
+summary(thetastar)
+
+# graficki prikaz distribucije uzorkovanja srednje vrijednosti PPG statistike
+hist(
+  thetastar,
+  main = "Distribucija uzorkovanja srednje vrijednosti PPG statistike",
+  xlab = "Srednja vrijednost PPG",
+  ylab = "Frekvencija",
+  prob = TRUE
+)
+
+```
+
+# Linearna regresija
+
+## Provjera ovisnosti 3PA o godini linearnom regresijom
+
+Samim pogledom na graf ovisnosti 3PA po utakmici o godini vidljivo je da postoji određena korelacija između te dvije vrijednosti.
+To nas je inspiriralo da napravimo linearnu regresiju da vidimo u kojoj mjeri zaista vrijedi ta ovisnost.
+
+```{r}
+
+library(tidyverse) # sluzi za grupiranja, joinove, filtriranja
+
+# plotting average three and two point attempts per year
+season.stats.points = seasons.stats[c('Year', 'X3PA', 'X2PA', 'G')]
+
+season.stats.points$X3PAPerGame = season.stats.points$X3PA / season.stats.points$G
+season.stats.points.complete = season.stats.points[complete.cases(season.stats.points),]
+
+season.stats.points.complete %>% group_by(Year) %>% summarize(ThreePointAttempts = mean(X3PAPerGame)) -> three.point.attempts
+
+test.data = three.point.attempts[three.point.attempts$Year > 2010,]
+three.point.attempts = three.point.attempts[three.point.attempts$Year <= 2010,]
+
+fit = lm(ThreePointAttempts~Year, data=three.point.attempts)
+summary(fit)
+
+fit$coefficients
+
+plot(
+  three.point.attempts$Year, 
+  three.point.attempts$ThreePointAttempts, 
+  xlab = "Godina", 
+  ylab = "3PA po utakmici"
+)
+lines(
+  three.point.attempts$Year, 
+  fit$fitted.values, 
+  col = 'skyblue'
+)
+
+# dijagram reziduala
+plot(fit$residuals)
+
+# qq plot
+qqnorm(rstandard(fit))
+qqline(rstandard(fit))
+
+ks.test(rstandard(fit),'pnorm')
+
+prediction = predict(fit,data=test.data, interval = "confidence")
+
+actual <- data.frame(cbind(actuals=three.point.attempts$ThreePointAttempts, predicteds=prediction))
+```
